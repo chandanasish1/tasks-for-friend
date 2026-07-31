@@ -1,0 +1,30 @@
+# Agent files
+.gemini/
+brain/
+*implementation_plan.md
+*task.md
+*walkthrough.md
+
+# Web Development
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+
+# Android & Capacitor
+android/.gradle
+android/.gradle-user/
+android/.gradle-user-home/
+android/build/
+android/app/build/
+android/app/.cxx/
+android/local.properties
+android/build_output*.txt
+.idea/
+*.iml
+*.apk
+*.aab
+www/
+
+# Local revert anchors (schema/data snapshots) — never publish
+backups/
