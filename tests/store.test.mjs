@@ -18,7 +18,7 @@ try {
 }
 
 const { createTasksStore } = await import('../src/store.mjs');
-const { sortTasksForDisplay, normalizePosition } = await import('../src/utils.mjs');
+const { sleep, sortTasksForDisplay, normalizePosition, toLocalDateIso } = await import('../src/utils.mjs');
 
 async function freshStore() {
     storage.clear();
@@ -94,6 +94,25 @@ test('repeated same-gap drags stay ordered: auto-rebalance beats float limits', 
     const positions = finalTasks.map((t) => normalizePosition(t.position));
     assert.equal(new Set(positions).size, 3, 'no position collisions after 200 same-gap drags');
     assert.ok(positions[0] < positions[1] && positions[1] < positions[2], 'strict order preserved');
+});
+
+test('routine heatmap snapshots completed/total for today', async () => {
+    const store = await freshStore();
+    const routine = listByName(store, 'Routine');
+    await store.addTask(routine.id, 'gym');
+    await store.addTask(routine.id, 'read');
+    const gym = listByName(store, 'Routine').tasks.find((t) => t.text === 'gym');
+
+    await store.updateTask(routine.id, gym.id, { completedAt: new Date().toISOString() });
+    await sleep(600); // snapshot capture is debounced
+
+    const today = toLocalDateIso(Date.now());
+    assert.deepEqual(store.getRoutineHeatmapDays()[today], { completed: 1, total: 2 });
+
+    // Undo drops the count; the day's denominator stays.
+    await store.updateTask(routine.id, gym.id, { completedAt: '' });
+    await sleep(600);
+    assert.deepEqual(store.getRoutineHeatmapDays()[today], { completed: 0, total: 2 });
 });
 
 // Just enough of the supabase-js surface for the fresh-account flow:

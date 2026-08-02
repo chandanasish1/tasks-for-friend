@@ -1,6 +1,6 @@
 {
     "name": "Tasks",
-    "version": "1.11.0",
+    "version": "1.12.0",
     "short_name": "Tasks",
     "description": "A minimalistic task management app",
     "start_url": "/",

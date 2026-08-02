@@ -5,6 +5,7 @@ import {
     formatErrorMessage,
     isCompletionExpired,
     isNetworkLikeError,
+    isTaskCompletedOn,
     normalizeList,
     normalizePosition,
     normalizeStateSnapshot,
@@ -12,11 +13,15 @@ import {
     sleep,
     sortListsForDisplay,
     sortTasksForDisplay,
+    toLocalDateIso,
     uid
 } from './utils.mjs';
 
 const STORAGE_KEY_PREFIX = 'tasks_app_data_v4';
 const MOBILE_QUEUE_KEY_PREFIX = 'tasks_mobile_queue_v4';
+const ROUTINE_DAYS_KEY_PREFIX = 'tasks_routine_days_v1';
+const ROUTINE_HISTORY_DAYS = 365;
+const ROUTINE_SNAPSHOT_DEBOUNCE_MS = 400;
 const AUTH_HINT_KEY = 'tasks_auth_hint_v1';
 const BUILT_IN_SETUP_KEY_PREFIX = 'tasks_builtin_setup_v1';
 const LEGACY_STATE_KEYS = ['tasks_app_data_v3', 'tasks_app_data_v2'];
@@ -62,6 +67,9 @@ export function createTasksStore({ supabase, enableOfflineQueue }) {
     let pendingRealtimeEvents = [];
     let realtimeEventsOverflowed = false;
     let queuedSyncTimer = null;
+    let routineDayWriteTimer = null;
+    let routineDaysCache = null;
+    let routineDaysCacheKey = '';
     const inFlightEntityWrites = new Map();
 
     // The queue is consulted on every mutation and status update; parsing
@@ -286,6 +294,185 @@ export function createTasksStore({ supabase, enableOfflineQueue }) {
             persistState();
         }
         emitState();
+        // Derived data: today's routine-heatmap row recomputes from whatever
+        // this state now says. Debounced, and a no-op when nothing changed.
+        scheduleRoutineDaySnapshot();
+    }
+
+    // =================== ROUTINE HEATMAP (routine_days) ===================
+    // One row per local day: how many routine tasks existed and how many were
+    // completed that day. The row is a snapshot written on the day itself —
+    // that is what makes ratios honest across time (the denominator is the
+    // routine count AS OF that day, immune to habits added or removed later).
+    // Derived from tasks, so it is recomputed rather than incremented: every
+    // state change re-derives today's row and writes it only if it differs.
+    // History caps at ROUTINE_HISTORY_DAYS; older rows are reaped.
+
+    function getRoutineDaysKey(scope = getScope()) {
+        return `${ROUTINE_DAYS_KEY_PREFIX}:${scope}`;
+    }
+
+    function getRoutineDaysMap() {
+        if (!canPersistScopedData()) {
+            return {};
+        }
+
+        const cacheKey = getRoutineDaysKey();
+        if (routineDaysCache && routineDaysCacheKey === cacheKey) {
+            return routineDaysCache;
+        }
+
+        const parsed = readJson(cacheKey);
+        routineDaysCache = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+        routineDaysCacheKey = cacheKey;
+        return routineDaysCache;
+    }
+
+    function persistRoutineDays(days) {
+        if (!canPersistScopedData()) {
+            return;
+        }
+
+        routineDaysCache = days;
+        routineDaysCacheKey = getRoutineDaysKey();
+        writeJson(getRoutineDaysKey(), days);
+    }
+
+    // Oldest day still kept: today minus (window - 1), so the window always
+    // spans exactly ROUTINE_HISTORY_DAYS days including today.
+    function getRoutineHistoryCutoffIso(now = Date.now()) {
+        return toLocalDateIso(now - (ROUTINE_HISTORY_DAYS - 1) * 86400000);
+    }
+
+    function computeTodayRoutineSnapshot() {
+        const routineList = state.lists.find(
+            (list) => normalizeListName(list.name) === normalizeListName(ROUTINE_LIST_NAME)
+        );
+        if (!routineList) {
+            return null;
+        }
+
+        const todayIso = toLocalDateIso(Date.now());
+        return {
+            doneOn: todayIso,
+            total: routineList.tasks.length,
+            completed: routineList.tasks.filter((task) => isTaskCompletedOn(task, todayIso)).length
+        };
+    }
+
+    function scheduleRoutineDaySnapshot() {
+        if (routineDayWriteTimer) {
+            clearTimeout(routineDayWriteTimer);
+        }
+
+        routineDayWriteTimer = setTimeout(() => {
+            routineDayWriteTimer = null;
+            captureRoutineDaySnapshot().catch((error) => {
+                console.warn('[Heatmap] Snapshot skipped:', error);
+            });
+        }, ROUTINE_SNAPSHOT_DEBOUNCE_MS);
+    }
+
+    async function captureRoutineDaySnapshot() {
+        const snapshot = computeTodayRoutineSnapshot();
+        if (!snapshot || !canPersistScopedData()) {
+            return;
+        }
+
+        const days = getRoutineDaysMap();
+        const existing = days[snapshot.doneOn];
+        if (existing && existing.completed === snapshot.completed && existing.total === snapshot.total) {
+            return;
+        }
+
+        persistRoutineDays({ ...days, [snapshot.doneOn]: { completed: snapshot.completed, total: snapshot.total } });
+        emitState();
+
+        if (!canSyncRemotely() || !isOnline()) {
+            // Offline writes self-heal: the reconnect sync replaces state,
+            // which re-schedules this capture with the server reachable.
+            return;
+        }
+
+        const { error } = await supabase
+            .from('routine_days')
+            .upsert({
+                user_id: currentUser.id,
+                done_on: snapshot.doneOn,
+                completed: snapshot.completed,
+                total: snapshot.total,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id,done_on' });
+
+        if (error) {
+            console.warn('[Heatmap] Snapshot write failed:', error);
+        }
+    }
+
+    // Fire-and-forget history pull; the heatmap is decoration, so it must
+    // never slow the main lists/tasks sync down.
+    async function fetchRoutineDaysFromRemote() {
+        if (!canSyncRemotely()) {
+            return;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('routine_days')
+                .select('done_on, completed, total')
+                .eq('user_id', currentUser.id)
+                .gte('done_on', getRoutineHistoryCutoffIso());
+
+            if (error) {
+                throw error;
+            }
+
+            const days = {};
+            for (const row of data || []) {
+                days[row.done_on] = { completed: row.completed, total: row.total };
+            }
+
+            if (JSON.stringify(days) !== JSON.stringify(getRoutineDaysMap())) {
+                persistRoutineDays(days);
+                emitState();
+                // Server wins for history, but today's row must still match
+                // the live task state (e.g. offline completions just synced).
+                scheduleRoutineDaySnapshot();
+            }
+        } catch (error) {
+            console.warn('[Heatmap] History fetch failed:', error);
+        }
+    }
+
+    async function reapOldRoutineDays(now = Date.now()) {
+        const cutoff = getRoutineHistoryCutoffIso(now);
+        const days = getRoutineDaysMap();
+        const kept = {};
+        let didChange = false;
+        for (const [day, value] of Object.entries(days)) {
+            if (day >= cutoff) {
+                kept[day] = value;
+            } else {
+                didChange = true;
+            }
+        }
+
+        if (didChange) {
+            persistRoutineDays(kept);
+            emitState();
+        }
+
+        if (canSyncRemotely() && isOnline()) {
+            const { error } = await supabase
+                .from('routine_days')
+                .delete()
+                .eq('user_id', currentUser.id)
+                .lt('done_on', cutoff);
+
+            if (error) {
+                console.warn('[Heatmap] History reap failed:', error);
+            }
+        }
     }
 
     function getQueue() {
@@ -1244,6 +1431,7 @@ export function createTasksStore({ supabase, enableOfflineQueue }) {
                     error: '',
                     lastSuccessAt: Date.now()
                 });
+                fetchRoutineDaysFromRemote();
                 return true;
             } catch (error) {
                 console.warn('[Sync] Remote refresh failed:', error);
@@ -2275,6 +2463,8 @@ export function createTasksStore({ supabase, enableOfflineQueue }) {
                 }
             }
         }
+        // Same rhythm, different ledger: heatmap rows expire after a year.
+        await reapOldRoutineDays(now);
         return reaped;
     }
 
@@ -2357,6 +2547,7 @@ export function createTasksStore({ supabase, enableOfflineQueue }) {
         subscribeAuth,
         subscribeSync,
         getState: () => state,
+        getRoutineHeatmapDays: () => ({ ...getRoutineDaysMap() }),
         getCurrentUser: () => currentUser,
         getSyncStatus: () => syncStatus,
         getPendingQueueLength: () => getQueue().length,

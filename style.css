@@ -802,8 +802,9 @@ body.web-app .sync-indicator.in-title {
 }
 
 /* Lists */
+/* Natural height on purpose: the routine heatmap docks directly below the
+   lists, and Sign Out's own margin-top: auto claims the leftover space. */
 .sidebar-lists {
-    flex: 1;
     display: flex;
     flex-direction: column;
 }
@@ -819,6 +820,91 @@ body.web-app .sync-indicator.in-title {
     text-transform: uppercase;
     /* Full white, like the board's date headers: headers outshine content. */
     color: #fff;
+}
+
+/* =================== ROUTINE HEATMAP =================== */
+/* Quarter-at-a-glance strip docked right below the lists. Cells are the
+   app's own white-opacity ramp — shade = fraction of that day's routines
+   completed. */
+.routine-heatmap {
+    padding: 4px 0 12px;
+    user-select: none;
+}
+
+.heatmap-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 12px 16px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #fff;
+}
+
+.heatmap-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.heatmap-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.heatmap-sub {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .02em;
+    text-transform: none;
+    color: var(--text3);
+}
+
+/* Integer cell/gap sizes only: fractional sizes snap to whole device
+   pixels per-cell and render as an uneven checkerboard. 13 week-columns
+   (one quarter) at 14px is the largest integer size that fits the
+   sidebar without scrolling; history beyond the window stays stored. */
+.heatmap-grid {
+    display: grid;
+    grid-template-rows: repeat(7, 14px);
+    grid-auto-flow: column;
+    grid-auto-columns: 14px;
+    gap: 2px;
+    justify-content: center;
+    padding: 0 16px 4px;
+    max-height: 140px;
+    overflow: hidden;
+    transition: max-height var(--t-spring), opacity var(--t);
+}
+
+/* Tap the ROUTINE header to fold the grid away; the today counter stays. */
+.routine-heatmap.collapsed .heatmap-grid {
+    max-height: 0;
+    opacity: 0;
+    padding-bottom: 0;
+}
+
+.heatmap-cell {
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.heatmap-cell[data-level="1"] {
+    background: rgba(255, 255, 255, 0.26);
+}
+
+.heatmap-cell[data-level="2"] {
+    background: rgba(255, 255, 255, 0.46);
+}
+
+.heatmap-cell[data-level="3"] {
+    background: rgba(255, 255, 255, 0.68);
+}
+
+.heatmap-cell[data-level="4"] {
+    background: rgba(255, 255, 255, 0.95);
 }
 
 .lists-toggle {

@@ -207,6 +207,12 @@ export async function bootstrapTasksApp() {
     const signOutBtn = $('#signOutBtn');
     const mainEl = $('#main');
     const board = $('#board');
+    const routineHeatmap = $('#routineHeatmap');
+    const heatmapHeader = $('#heatmapHeader');
+    const heatmapToggle = $('#heatmapToggle');
+    const heatmapGrid = $('#heatmapGrid');
+    const heatmapSub = $('#heatmapSub');
+    const HEATMAP_COLLAPSED_KEY = 'tasks_heatmap_collapsed_v1';
 
     const contextMenu = $('#contextMenu');
     const ctxRename = $('#ctxRename');
@@ -784,6 +790,77 @@ export async function bootstrapTasksApp() {
 
         reconcileChildren(listsContainer, descriptors);
         ensureSidebarSortable();
+    }
+
+    // =================== ROUTINE HEATMAP ===================
+    // GitHub-style grid at the bottom of the sidebar: one cell per local
+    // day, columns are weeks (Sunday-first), shade = fraction of that day's
+    // routine tasks completed. Each day's row snapshots its own denominator
+    // (store.captureRoutineDaySnapshot), so old cells stay honest when
+    // routines are added or removed later. Displays the last quarter — the
+    // widest window whose cells still render big and even in the sidebar —
+    // while the store keeps a full year, so the window can widen later.
+    const HEATMAP_WEEKS = 13;
+    function renderRoutineHeatmap() {
+        if (!routineHeatmap) {
+            return;
+        }
+
+        const hasRoutineList = appState.lists.some((list) => getBuiltInListKey(list) === 'ROUTINE');
+        routineHeatmap.classList.toggle('hidden', !hasRoutineList);
+        if (!hasRoutineList) {
+            return;
+        }
+
+        const todayIso = getTodayIso();
+        const days = store.getRoutineHeatmapDays();
+
+        // The day window only shifts at midnight; rebuild the cell skeleton
+        // then, patch shades in place otherwise.
+        if (heatmapGrid.dataset.window !== todayIso) {
+            heatmapGrid.dataset.window = todayIso;
+            heatmapGrid.innerHTML = '';
+            const end = new Date(`${todayIso}T00:00:00`);
+            const start = new Date(end);
+            // Sunday of the current week, then back the remaining weeks:
+            // exactly HEATMAP_WEEKS columns, the last one ending today.
+            start.setDate(start.getDate() - start.getDay() - (HEATMAP_WEEKS - 1) * 7);
+            for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+                const cell = document.createElement('div');
+                cell.className = 'heatmap-cell';
+                cell.dataset.day = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
+                heatmapGrid.appendChild(cell);
+            }
+        }
+
+        let todayEntry = null;
+        for (const cell of heatmapGrid.children) {
+            const entry = days[cell.dataset.day];
+            let level = 0;
+            if (entry && entry.total > 0 && entry.completed > 0) {
+                level = Math.min(4, Math.ceil((entry.completed / entry.total) * 4));
+            }
+            const levelValue = String(level);
+            if (cell.dataset.level !== levelValue) {
+                cell.dataset.level = levelValue;
+            }
+            const title = entry
+                ? `${formatDate(cell.dataset.day)} — ${entry.completed}/${entry.total} routines`
+                : `${formatDate(cell.dataset.day)} — no data`;
+            if (cell.title !== title) {
+                cell.title = title;
+            }
+            if (cell.dataset.day === todayIso) {
+                todayEntry = entry || null;
+            }
+        }
+
+        const subText = todayEntry && todayEntry.total > 0
+            ? `${todayEntry.completed}/${todayEntry.total} today`
+            : '';
+        if (heatmapSub.textContent !== subText) {
+            heatmapSub.textContent = subText;
+        }
     }
 
     function renderBoard() {
@@ -2419,6 +2496,7 @@ export async function bootstrapTasksApp() {
             element.classList.toggle('active', element.dataset.view === appState.activeView);
         });
         renderSidebarLists();
+        renderRoutineHeatmap();
         renderBoard();
     }
 
@@ -2486,6 +2564,7 @@ export async function bootstrapTasksApp() {
             store.syncNow();
         });
     }
+
 
     authForm.addEventListener('submit', handleAuth);
     hamburgerBtn.addEventListener('click', toggleSidebar);
@@ -2656,6 +2735,27 @@ export async function bootstrapTasksApp() {
     listsToggle.addEventListener('click', () => {
         listsToggle.classList.toggle('collapsed');
         listsContainer.classList.toggle('collapsed');
+    });
+
+    // Tap the ROUTINE header (or its chevron) to fold the heatmap away.
+    // A device-local preference: it survives reloads but is not synced.
+    function applyHeatmapCollapsed(collapsed) {
+        routineHeatmap.classList.toggle('collapsed', collapsed);
+        heatmapToggle.classList.toggle('collapsed', collapsed);
+    }
+    applyHeatmapCollapsed(Boolean(localStorage.getItem(HEATMAP_COLLAPSED_KEY)));
+    heatmapHeader.addEventListener('click', () => {
+        const collapsed = !routineHeatmap.classList.contains('collapsed');
+        applyHeatmapCollapsed(collapsed);
+        try {
+            if (collapsed) {
+                localStorage.setItem(HEATMAP_COLLAPSED_KEY, '1');
+            } else {
+                localStorage.removeItem(HEATMAP_COLLAPSED_KEY);
+            }
+        } catch (error) {
+            // Preference just won't stick; the toggle itself still works.
+        }
     });
 
     if (signOutBtn) {
