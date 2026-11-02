@@ -41,6 +41,16 @@ export function normalizePosition(position) {
 // end of the local day it was checked off, then gets reaped — every morning
 // starts with a clean slate. Routine tasks use the same stamp and the same
 // day boundary, but flip back to pending instead of being deleted.
+export function getTodayIso(now = Date.now()) {
+    return toLocalDateIso(now);
+}
+
+export function getTomorrowIso(now = Date.now()) {
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return toLocalDateIso(tomorrow);
+}
+
 export function toLocalDateIso(timestamp) {
     const parsed = new Date(timestamp);
     if (Number.isNaN(parsed.getTime())) {
@@ -248,6 +258,38 @@ export function sortUpcomingTasksForDisplay(tasks) {
     });
 }
 
+// Tomorrow: aggregated tasks dated for tomorrow, ordered by completed status,
+// then time, then position.
+export function sortTomorrowTasksForDisplay(tasks) {
+    return [...tasks].sort((left, right) => {
+        const leftDone = isTaskCompleted(left);
+        const rightDone = isTaskCompleted(right);
+        if (leftDone !== rightDone) {
+            return leftDone ? 1 : -1;
+        }
+        if (leftDone && rightDone && left.completedAt !== right.completedAt) {
+            return (right.completedAt || '').localeCompare(left.completedAt || '');
+        }
+
+        const timeOrder = compareTimesWithinDay(left, right);
+        if (timeOrder !== 0) {
+            return timeOrder;
+        }
+
+        const leftPosition = normalizePosition(left.position);
+        const rightPosition = normalizePosition(right.position);
+        if (leftPosition !== null && rightPosition !== null && leftPosition !== rightPosition) {
+            return leftPosition - rightPosition;
+        }
+
+        if (left.createdAt !== right.createdAt) {
+            return (right.createdAt || '').localeCompare(left.createdAt || '');
+        }
+
+        return String(left.id || '').localeCompare(String(right.id || ''));
+    });
+}
+
 // Routine: the list's own manual order, with tasks already done today sunk
 // to the bottom (they reset — and float back up — at the midnight rollover).
 // compareTasksForDisplay's done-sink keys off any completedAt, which would
@@ -339,7 +381,7 @@ export function cloneStateSnapshot(snapshot = {}) {
 // Routine are the name-activated smart lists; the rest are regular lists.
 // Used both for the local-mode default state and for seeding a brand-new
 // account's first server rows (store.seedDefaultLists).
-export const DEFAULT_LIST_NAMES = ['Today', 'Upcoming', 'Routine', 'Commitments', 'Academics'];
+export const DEFAULT_LIST_NAMES = ['Today', 'Tomorrow', 'Upcoming', 'Routine', 'Commitments', 'Academics'];
 
 export function createDefaultState() {
     return normalizeStateSnapshot({

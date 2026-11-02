@@ -8,7 +8,7 @@ browser always show the same thing.
 ## Lists — the one rule that matters
 
 **A list's name decides how it behaves.** Lists named exactly `Today`,
-`Upcoming`, or `Routine` are smart lists with special behavior (the app blocks
+`Tomorrow`, `Upcoming`, or `Routine` are smart lists with special behavior (the app blocks
 renaming or deleting them). Every other list — `Commitments`, `Academics`, or
 anything you create — is a regular list.
 
@@ -33,6 +33,13 @@ Your "what do I do right now" screen. It automatically gathers:
 
 Drag to reorder inside Today and the home lists reorder to match — and vice
 versa. Tasks you complete stay visible (struck through) until midnight.
+
+### Tomorrow
+
+A dedicated planning space for the next day:
+- Every task from any list **due tomorrow** (with a badge naming its home list).
+- Tasks you add directly here automatically get tomorrow's date — without you manually scheduling it.
+- At midnight, these tasks seamlessly roll into Today.
 
 ### Upcoming
 

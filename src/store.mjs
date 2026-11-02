@@ -12,6 +12,7 @@ import {
     normalizeVersion,
     sleep,
     sortListsForDisplay,
+    getTomorrowIso,
     sortTasksForDisplay,
     toLocalDateIso,
     uid
@@ -41,8 +42,10 @@ const REALTIME_MAX_PENDING_EVENTS = 60;
 const REALTIME_RETRY_MAX_DELAY_MS = 30000;
 const POSITION_STEP = 1024;
 const TODAY_LIST_NAME = 'Today';
+const TOMORROW_LIST_NAME = 'Tomorrow';
 const UPCOMING_LIST_NAME = 'Upcoming';
 const ROUTINE_LIST_NAME = 'Routine';
+const TOMORROW_SETUP_KEY = 'tomorrow';
 const UPCOMING_SETUP_KEY = 'upcoming';
 
 export function createTasksStore({ supabase, enableOfflineQueue }) {
@@ -250,6 +253,7 @@ export function createTasksStore({ supabase, enableOfflineQueue }) {
     function isBuiltInListName(name) {
         const normalizedName = normalizeListName(name);
         return normalizedName === normalizeListName(TODAY_LIST_NAME)
+            || normalizedName === normalizeListName(TOMORROW_LIST_NAME)
             || normalizedName === normalizeListName(UPCOMING_LIST_NAME)
             || normalizedName === normalizeListName(ROUTINE_LIST_NAME);
     }
@@ -2035,8 +2039,12 @@ export function createTasksStore({ supabase, enableOfflineQueue }) {
     }
 
     async function ensureBuiltInLists() {
-        await ensureBuiltInList(UPCOMING_LIST_NAME, {
+        await ensureBuiltInList(TOMORROW_LIST_NAME, {
             afterName: TODAY_LIST_NAME,
+            setupKey: TOMORROW_SETUP_KEY
+        });
+        await ensureBuiltInList(UPCOMING_LIST_NAME, {
+            afterName: TOMORROW_LIST_NAME,
             setupKey: UPCOMING_SETUP_KEY
         });
     }
@@ -2110,12 +2118,13 @@ export function createTasksStore({ supabase, enableOfflineQueue }) {
 
         const taskId = uid();
         const createdAt = new Date().toISOString();
+        const effectiveDate = date || (normalizeListName(list.name) === normalizeListName(TOMORROW_LIST_NAME) ? getTomorrowIso() : '');
         const position = getNextPositionForIndex(list.tasks, 0);
         const newTask = {
             id: taskId,
             text,
             details: '',
-            date,
+            date: effectiveDate,
             time: '',
             createdAt,
             updatedAt: createdAt,
@@ -2133,7 +2142,7 @@ export function createTasksStore({ supabase, enableOfflineQueue }) {
                 id: taskId,
                 list_id: listId,
                 title: text,
-                due_date: date || null,
+                due_date: effectiveDate || null,
                 notes: '',
                 position,
                 created_at: createdAt,

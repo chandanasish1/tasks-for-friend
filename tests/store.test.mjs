@@ -18,7 +18,7 @@ try {
 }
 
 const { createTasksStore } = await import('../src/store.mjs');
-const { sleep, sortTasksForDisplay, normalizePosition, toLocalDateIso } = await import('../src/utils.mjs');
+const { sleep, sortTasksForDisplay, normalizePosition, toLocalDateIso, getTomorrowIso } = await import('../src/utils.mjs');
 
 async function freshStore() {
     storage.clear();
@@ -181,14 +181,14 @@ test('first sign-in of an empty account seeds the default lists on the server', 
     await store.bootstrap();
 
     const names = store.getState().lists.map((list) => list.name);
-    assert.deepEqual(names, ['Today', 'Upcoming', 'Routine', 'Commitments', 'Academics']);
-    assert.equal(fakeSupabase.upsertCount, 5, 'each default list becomes a real server row');
-    assert.equal(fakeSupabase.serverLists.length, 5);
+    assert.deepEqual(names, ['Today', 'Tomorrow', 'Upcoming', 'Routine', 'Commitments', 'Academics']);
+    assert.equal(fakeSupabase.upsertCount, 6, 'each default list becomes a real server row');
+    assert.equal(fakeSupabase.serverLists.length, 6);
 
     // A later sync must not reseed: the server now has the lists.
     await store.syncNow();
-    assert.equal(fakeSupabase.upsertCount, 5, 'no duplicate seeding on subsequent syncs');
-    assert.equal(store.getState().lists.length, 5);
+    assert.equal(fakeSupabase.upsertCount, 6, 'no duplicate seeding on subsequent syncs');
+    assert.equal(store.getState().lists.length, 6);
 });
 
 test('completed tasks are excluded from drop-index math', async () => {
@@ -206,4 +206,14 @@ test('completed tasks are excluded from drop-index math', async () => {
     await store.moveTask(byText('c').id, list.id, list.id, 0);
     const pending = sortTasksForDisplay(listByName(store, 'Commitments').tasks).filter((t) => !t.completedAt);
     assert.deepEqual(pending.map((t) => t.text), ['c', 'b']);
+});
+
+test('adding a task to Tomorrow list automatically assigns tomorrow date', async () => {
+    const store = await freshStore();
+    const tomorrowList = listByName(store, 'Tomorrow');
+    assert.ok(tomorrowList, 'Tomorrow list exists');
+    await store.addTask(tomorrowList.id, 'prepare slides');
+    const task = listByName(store, 'Tomorrow').tasks.find((t) => t.text === 'prepare slides');
+    assert.ok(task, 'task was created');
+    assert.equal(task.date, getTomorrowIso(), 'task was assigned tomorrow date automatically');
 });

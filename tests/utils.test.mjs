@@ -9,6 +9,9 @@ import {
     sortRoutineTasksForDisplay,
     sortTasksForDisplay,
     sortTodayTasksForDisplay,
+    sortTomorrowTasksForDisplay,
+    getTodayIso,
+    getTomorrowIso,
     toLocalDateIso
 } from '../src/utils.mjs';
 
@@ -75,4 +78,21 @@ test('today sort: completed natives sink below pending and overdue', () => {
 
     const sorted = sortTodayTasksForDisplay([doneNative, pendingNative, overdue], 'today-id', TODAY);
     assert.deepEqual(sorted.map((t) => t.id), ['o', 'p', 'q']);
+});
+
+test('tomorrow sort: completed tasks sink, pending tasks sort by time then position', () => {
+    const done = { id: 'd', position: 1024, completedAt: new Date().toISOString() };
+    const timedLater = { id: 'l', position: 2048, time: '14:00' };
+    const timedEarlier = { id: 'e', position: 3072, time: '09:00' };
+    const untimed = { id: 'u', position: 512 };
+
+    const sorted = sortTomorrowTasksForDisplay([done, timedLater, untimed, timedEarlier]);
+    assert.deepEqual(sorted.map((t) => t.id), ['e', 'l', 'u', 'd']);
+});
+
+test('getTomorrowIso returns next day in YYYY-MM-DD format', () => {
+    const today = getTodayIso();
+    const tomorrow = getTomorrowIso();
+    assert.match(tomorrow, /^\d{4}-\d{2}-\d{2}$/);
+    assert.notEqual(today, tomorrow);
 });

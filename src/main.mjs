@@ -6,6 +6,7 @@ import {
     sortRoutineTasksForDisplay,
     sortTasksForDisplay,
     sortTodayTasksForDisplay,
+    sortTomorrowTasksForDisplay,
     sortUpcomingTasksForDisplay
 } from './utils.mjs';
 import { APP_VERSION } from './version.mjs';
@@ -87,6 +88,12 @@ function formatDate(iso) {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+}
+
+function getTomorrowIso() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
 }
 
 function getTodayIso() {
@@ -380,7 +387,7 @@ export async function bootstrapTasksApp() {
     // Routine tasks and Today-native tasks are dateless by design (implicitly
     // "today"), so their rows and entry forms never offer a date.
     function listForbidsDates(listOrId) {
-        return isTodayList(listOrId) || isRoutineList(listOrId);
+        return isTodayList(listOrId) || isTomorrowList(listOrId) || isRoutineList(listOrId);
     }
 
     function getNextTodayPosition(index) {
@@ -519,6 +526,9 @@ export async function bootstrapTasksApp() {
         if (builtInListKey === 'TODAY') {
             return sortTodayTasksForDisplay(tasks, builtInListId, getTodayIso());
         }
+        if (builtInListKey === 'TOMORROW') {
+            return sortTomorrowTasksForDisplay(tasks);
+        }
         if (builtInListKey === 'UPCOMING') {
             return sortUpcomingTasksForDisplay(tasks);
         }
@@ -535,13 +545,17 @@ export async function bootstrapTasksApp() {
         }
 
         const todayIso = getTodayIso();
+        const tomorrowIso = getTomorrowIso();
         const aggregatedTasks = [];
         const builtInListIndex = appState.lists.findIndex((list) => list.id === found.id);
 
         found.tasks.forEach((task) => {
-            const includeOwnTask = builtInListKey === 'UPCOMING'
-                ? Boolean(task.date) && task.date > todayIso && !isTaskCompleted(task)
-                : true;
+            let includeOwnTask = true;
+            if (builtInListKey === 'UPCOMING') {
+                includeOwnTask = Boolean(task.date) && task.date > todayIso && !isTaskCompleted(task);
+            } else if (builtInListKey === 'TOMORROW') {
+                includeOwnTask = (!task.date || task.date === tomorrowIso);
+            }
 
             if (includeOwnTask) {
                 aggregatedTasks.push({
@@ -553,7 +567,7 @@ export async function bootstrapTasksApp() {
             }
         });
 
-        // Routine shows only its own tasks; Today and Upcoming aggregate.
+        // Routine shows only its own tasks; Today, Tomorrow, and Upcoming aggregate.
         if (builtInListKey !== 'ROUTINE') {
             appState.lists.forEach((list, listIndex) => {
                 if (list.id === found.id) {
@@ -561,14 +575,6 @@ export async function bootstrapTasksApp() {
                 }
                 const isRoutineSource = isRoutineList(list);
                 list.tasks.forEach((task) => {
-                    // Today pulls in every routine task and every dated task due
-                    // today or overdue — completed ones included, so a task
-                    // ticked off in Today stays there (struck, in Today's
-                    // COMPLETED section) alongside its home-column copy until
-                    // midnight. _doneInToday carries the day-scoped verdict:
-                    // a routine finished YESTERDAY is pending again, even
-                    // though its stale stamp would read as "completed".
-                    // Upcoming stays future-only, pending-only, routine-free.
                     if (builtInListKey === 'TODAY') {
                         const isMatch = isRoutineSource || (Boolean(task.date) && task.date <= todayIso);
                         if (isMatch) {
@@ -580,6 +586,19 @@ export async function bootstrapTasksApp() {
                                 _doneInToday: isRoutineSource
                                     ? isTaskCompletedOn(task, todayIso)
                                     : isTaskCompleted(task)
+                            });
+                        }
+                        return;
+                    }
+
+                    if (builtInListKey === 'TOMORROW') {
+                        const isMatch = !isRoutineSource && Boolean(task.date) && task.date === tomorrowIso;
+                        if (isMatch) {
+                            aggregatedTasks.push({
+                                ...task,
+                                _originListId: list.id,
+                                _originListIndex: listIndex,
+                                _listName: list.name
                             });
                         }
                         return;
@@ -1108,6 +1127,7 @@ export async function bootstrapTasksApp() {
     function buildTaskListDescriptors(display) {
         const builtInListKey = getBuiltInListKey(display);
         const isTodayColumn = builtInListKey === 'TODAY';
+        const isTomorrowColumn = builtInListKey === 'TOMORROW';
         const isRoutineColumn = builtInListKey === 'ROUTINE';
         const todayIso = getTodayIso();
         const columnListId = display.id;
@@ -1131,11 +1151,15 @@ export async function bootstrapTasksApp() {
         const isOverdueTodayTask = (task) => isTodayColumn && Boolean(task.date) && task.date < todayIso;
         // In Today, overdue tasks keep their real (past) date so the section
         // header can show it, instead of being relabeled as today.
+        const tomorrowIso = getTomorrowIso();
         const getDisplayDate = (task) => {
-            if (!isTodayColumn) {
-                return task.date;
+            if (isTodayColumn) {
+                return isOverdueTodayTask(task) ? task.date : todayIso;
             }
-            return isOverdueTodayTask(task) ? task.date : todayIso;
+            if (isTomorrowColumn) {
+                return tomorrowIso;
+            }
+            return task.date;
         };
 
         const descriptors = [];
@@ -1153,13 +1177,13 @@ export async function bootstrapTasksApp() {
                     // section) alongside their home copy; only Upcoming is
                     // strictly pending, so only there does a completion make
                     // the row exit the view.
-                    rowLeavesView: builtInListKey === 'UPCOMING' && actualListId !== columnListId
+                    rowLeavesView: (builtInListKey === 'UPCOMING' || builtInListKey === 'TOMORROW') && actualListId !== columnListId
                 })
             });
         };
 
         const datedTasks = pendingTasks.filter((task) => Boolean(getDisplayDate(task)));
-        const undatedTasks = isTodayColumn ? [] : pendingTasks.filter((task) => !task.date);
+        const undatedTasks = (isTodayColumn || isTomorrowColumn) ? [] : pendingTasks.filter((task) => !task.date);
 
         let lastDate = null;
         datedTasks.forEach((task) => {
@@ -1377,7 +1401,7 @@ export async function bootstrapTasksApp() {
         }
 
         const canSortVirtualList = list._isVirtual
-            && (builtInListKey === 'TODAY' || builtInListKey === 'UPCOMING' || builtInListKey === 'ROUTINE');
+            && (builtInListKey === 'TODAY' || builtInListKey === 'TOMORROW' || builtInListKey === 'UPCOMING' || builtInListKey === 'ROUTINE');
         if (!window.Sortable || (list._isVirtual && !canSortVirtualList)) {
             container.classList.remove('task-list-sortable');
             return;
@@ -1453,9 +1477,9 @@ export async function bootstrapTasksApp() {
                     return;
                 }
 
-                if (virtualListKey === 'TODAY' || virtualListKey === 'UPCOMING') {
+                if (virtualListKey === 'TODAY' || virtualListKey === 'TOMORROW' || virtualListKey === 'UPCOMING') {
                     const result = await moveTaskFromBuiltInView(taskId, fromListId, event.to, {
-                        dateBound: virtualListKey === 'UPCOMING',
+                        dateBound: virtualListKey === 'UPCOMING' || virtualListKey === 'TOMORROW',
                         persistManualOrder: virtualListKey === 'TODAY'
                     });
                     if (!result?.ok || result.skipped) {
@@ -1882,7 +1906,8 @@ export async function bootstrapTasksApp() {
                 element.insertBefore(timeBadge, element.querySelector('.task-actions'));
             }
             const implicitlyToday = isTodayList(ctx.actualListId) || isRoutineList(ctx.actualListId);
-            timeBadge.dataset.dueDate = task.date || (implicitlyToday ? getTodayIso() : '');
+            const implicitlyTomorrow = isTomorrowList(ctx.actualListId);
+            timeBadge.dataset.dueDate = task.date || (implicitlyToday ? getTodayIso() : (implicitlyTomorrow ? getTomorrowIso() : ''));
             timeBadge.dataset.dueTime = task.time;
             if (ctx.done) {
                 timeBadge.dataset.done = '1';
@@ -1899,7 +1924,7 @@ export async function bootstrapTasksApp() {
             timeBadge.remove();
         }
 
-        const ownerForbidsDates = isTodayList(ctx.actualListId) || isRoutineList(ctx.actualListId);
+        const ownerForbidsDates = isTodayList(ctx.actualListId) || isTomorrowList(ctx.actualListId) || isRoutineList(ctx.actualListId);
         element.querySelector('.task-date-btn').style.display = ownerForbidsDates ? 'none' : '';
         element.querySelector('.task-time-btn').classList.toggle('has-time', Boolean(task.time));
     }
@@ -2033,7 +2058,8 @@ export async function bootstrapTasksApp() {
             const text = input.value.trim();
             cleanup();
             if (text) {
-                store.addTask(listId, text, canEditDate ? newTaskDate : '');
+                const autoDate = isTomorrowList(listId) ? getTomorrowIso() : '';
+                store.addTask(listId, text, canEditDate ? newTaskDate : autoDate);
             }
             flushPendingRender();
         };
