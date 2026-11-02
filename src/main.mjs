@@ -346,7 +346,7 @@ export async function bootstrapTasksApp() {
         }
 
         const normalizedName = found.name.trim().toUpperCase();
-        if (normalizedName === 'TODAY' || normalizedName === 'UPCOMING' || normalizedName === 'ROUTINE') {
+        if (normalizedName === 'TODAY' || normalizedName === 'TOMORROW' || normalizedName === 'UPCOMING' || normalizedName === 'ROUTINE') {
             return normalizedName;
         }
 
@@ -377,6 +377,11 @@ export async function bootstrapTasksApp() {
     function isTodayList(listOrId) {
         const list = typeof listOrId === 'string' ? findListById(listOrId) : listOrId;
         return getBuiltInListKey(list) === 'TODAY';
+    }
+
+    function isTomorrowList(listOrId) {
+        const list = typeof listOrId === 'string' ? findListById(listOrId) : listOrId;
+        return getBuiltInListKey(list) === 'TOMORROW';
     }
 
     function isRoutineList(listOrId) {
