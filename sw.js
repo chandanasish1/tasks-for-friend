@@ -3,7 +3,7 @@
 // ============================================
 
 // Versioned by scripts/set-version.mjs — do not edit by hand.
-const CACHE_NAME = 'tasks-app-v1.16.0';
+const CACHE_NAME = 'tasks-app-v1.17.0';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -14,6 +14,7 @@ const STATIC_ASSETS = [
     '/sortable.min.js',
     '/src/config.mjs',
     '/src/main.mjs',
+    '/src/companion.mjs',
     '/src/store.mjs',
     '/src/pomodoro.mjs',
     '/src/pomodoro-store.mjs',

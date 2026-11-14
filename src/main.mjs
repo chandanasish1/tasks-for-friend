@@ -4,6 +4,7 @@ import { createDayPlanner } from './schedule-ui.mjs';
 import { clock, priorityOrder } from './day-plan.mjs';
 import { routineOccurrence } from './task-reminders.mjs';
 import { mountTaskNotifications } from './task-notifications.mjs';
+import { mountCompanion } from './companion.mjs';
 import {
     isTaskCompleted,
     isTaskCompletedOn,
@@ -3207,6 +3208,7 @@ export async function bootstrapTasksApp() {
     render();
     await syncNativeConnectivityState();
     await store.bootstrap();
+    mountCompanion(store);
     taskNotifications = mountTaskNotifications({ store, plannedTasks: day => {
         if (!dayPlanner.get(day)) return null;
         const name = day === getTodayIso() ? 'TODAY' : day === getTomorrowIso() ? 'TOMORROW' : null;
