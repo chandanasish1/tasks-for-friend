@@ -1,4 +1,7 @@
 import { createTasksStore } from './store.mjs';
+import { mountPomodoro } from './pomodoro-ui.mjs';
+import { createDayPlanner } from './schedule-ui.mjs';
+import { clock, priorityOrder } from './day-plan.mjs';
 import {
     isTaskCompleted,
     isTaskCompletedOn,
@@ -139,6 +142,7 @@ export async function bootstrapTasksApp() {
     const capacitor = typeof window !== 'undefined' ? window.Capacitor : null;
     const enableOfflineQueue = detectNativeApp();
     const store = createTasksStore({ supabase, enableOfflineQueue });
+    mountPomodoro({ taskStore: store, supabase });
     const getNativePlugin = (pluginName) => {
         if (!enableOfflineQueue || !capacitor?.isNativePlatform?.()) {
             return null;
@@ -164,6 +168,8 @@ export async function bootstrapTasksApp() {
     }
 
     let appState = store.getState();
+    let needsInitialTaskView = true;
+    const dayPlanner = createDayPlanner({ store, render });
     let currentUser = store.getCurrentUser();
     let syncStatus = store.getSyncStatus();
     let lastWidth = window.innerWidth;
@@ -558,6 +564,8 @@ export async function bootstrapTasksApp() {
             let includeOwnTask = true;
             if (builtInListKey === 'UPCOMING') {
                 includeOwnTask = Boolean(task.date) && task.date > todayIso && !isTaskCompleted(task);
+            } else if (builtInListKey === 'TODAY') {
+                includeOwnTask = !task.date || task.date <= todayIso;
             } else if (builtInListKey === 'TOMORROW') {
                 includeOwnTask = (!task.date || task.date === tomorrowIso);
             }
@@ -619,7 +627,9 @@ export async function bootstrapTasksApp() {
 
         return {
             ...found,
-            tasks: sortBuiltInTasksForDisplay(aggregatedTasks, builtInListKey, found.id),
+            tasks: (builtInListKey === 'TODAY' || builtInListKey === 'TOMORROW')
+                ? dayPlanner.arrange(sortBuiltInTasksForDisplay(aggregatedTasks, builtInListKey, found.id), builtInListKey === 'TODAY' ? todayIso : tomorrowIso)
+                : sortBuiltInTasksForDisplay(aggregatedTasks, builtInListKey, found.id),
             _isVirtual: true
         };
     }
@@ -1033,6 +1043,17 @@ export async function bootstrapTasksApp() {
         });
         column.appendChild(header);
 
+        if (builtInListKey === 'TODAY' || builtInListKey === 'TOMORROW') {
+            const controls = document.createElement('div'); controls.className = 'day-plan-controls';
+            controls.innerHTML = '<button type="button" class="day-start"></button><input type="time" class="day-start-time" aria-label="Plan start time"><span></span>';
+            controls.querySelector('button').onclick = () => {
+                const day = builtInListKey === 'TODAY' ? getTodayIso() : getTomorrowIso();
+                const start = builtInListKey === 'TODAY' ? dayPlanner.now() : dayPlanner.minutes(controls.querySelector('input').value);
+                if (start !== null) dayPlanner.start(day, start);
+            };
+            column.append(controls);
+        }
+
         if (builtInListKey !== 'UPCOMING') {
             const addRow = document.createElement('div');
             addRow.className = 'add-task-row';
@@ -1061,6 +1082,17 @@ export async function bootstrapTasksApp() {
         const titleEl = column.querySelector('.column-title');
         if (titleEl.textContent !== display.name) {
             titleEl.textContent = display.name;
+        }
+        const controls = column.querySelector('.day-plan-controls');
+        if (controls) {
+            const isToday = getBuiltInListKey(display) === 'TODAY';
+            const active = dayPlanner.get(isToday ? getTodayIso() : getTomorrowIso());
+            controls.querySelector('button').textContent = isToday ? (active ? 'Replan from now' : 'Start my day') : 'Plan tomorrow';
+            const input = controls.querySelector('input'); input.hidden = isToday;
+            if (!input.value) input.value = clock(active?.start ?? dayPlanner.now());
+            controls.querySelector('span').textContent = active
+                ? 'Fixed events stay anchored. Unfinished work moves into the next free gap. ↑ ↓ set flexible-task priority.'
+                : 'Add durations, then plan around your fixed events. Tasks without durations stay unallocated.';
         }
         reconcileChildren(column.querySelector('.task-list'), buildTaskListDescriptors(display));
     }
@@ -1159,7 +1191,7 @@ export async function bootstrapTasksApp() {
         const tomorrowIso = getTomorrowIso();
         const getDisplayDate = (task) => {
             if (isTodayColumn) {
-                return isOverdueTodayTask(task) ? task.date : todayIso;
+                return dayPlanner.get(todayIso) ? todayIso : isOverdueTodayTask(task) ? task.date : todayIso;
             }
             if (isTomorrowColumn) {
                 return tomorrowIso;
@@ -1482,7 +1514,15 @@ export async function bootstrapTasksApp() {
                     return;
                 }
 
-                if (virtualListKey === 'TODAY' || virtualListKey === 'TOMORROW' || virtualListKey === 'UPCOMING') {
+                if (virtualListKey === 'TODAY' || virtualListKey === 'TOMORROW') {
+                    const day = virtualListKey === 'TODAY' ? getTodayIso() : getTomorrowIso();
+                    const entries = [...event.to.querySelectorAll('.task-item:not(.task-done)')]
+                        .filter(el => !el.__task.time || el.__task.timeKind === 'deadline' || el.__task.rigid === false);
+                    await store.updateTasksBatch(entries.map((el, i) => ({ listId: el.__ctx.actualListId, taskId: el.__task.id,
+                        updates: { dayOrder: { ...el.__task.dayOrder, [day]: (i + 1) * POSITION_STEP } } })));
+                    render(); return;
+                }
+                if (virtualListKey === 'UPCOMING') {
                     const result = await moveTaskFromBuiltInView(taskId, fromListId, event.to, {
                         dateBound: virtualListKey === 'UPCOMING' || virtualListKey === 'TOMORROW',
                         persistManualOrder: virtualListKey === 'TODAY'
@@ -1711,11 +1751,22 @@ export async function bootstrapTasksApp() {
         const timeButton = document.createElement('button');
         timeButton.className = 'task-time-btn';
         timeButton.innerHTML = icon('clock', 18);
+        timeButton.setAttribute('aria-label', 'Edit task schedule');
         timeButton.addEventListener('click', (event) => {
             event.stopPropagation();
-            openTimeModal(element.__ctx.actualListId, element.__task.id);
+            dayPlanner.edit(element.__ctx.actualListId, element.__task.id);
         });
         actions.appendChild(timeButton);
+        for (const direction of [-1, 1]) {
+            const button = document.createElement('button'); button.className = 'task-order-btn';
+            button.textContent = direction < 0 ? '↑' : '↓';
+            button.setAttribute('aria-label', direction < 0 ? 'Move task earlier' : 'Move task later');
+            button.onclick = async event => {
+                event.stopPropagation();
+                await moveDailyTask(element.__task, element.__ctx, direction);
+            };
+            actions.append(button);
+        }
 
         const menuButton = document.createElement('button');
         menuButton.className = 'task-menu-btn';
@@ -1931,7 +1982,33 @@ export async function bootstrapTasksApp() {
 
         const ownerForbidsDates = isTodayList(ctx.actualListId) || isTomorrowList(ctx.actualListId) || isRoutineList(ctx.actualListId);
         element.querySelector('.task-date-btn').style.display = ownerForbidsDates ? 'none' : '';
-        element.querySelector('.task-time-btn').classList.toggle('has-time', Boolean(task.time));
+        element.querySelector('.task-time-btn').classList.toggle('has-time', Boolean(task.time || task.duration));
+        let summary = content.querySelector('.task-schedule-summary');
+        if (!summary) { summary = document.createElement('div'); summary.className = 'task-schedule-summary'; content.append(summary); }
+        const p = task._plan;
+        if (timeBadge) timeBadge.hidden = p?.start != null;
+        summary.dataset.warning = Boolean(p?.warning);
+        summary.textContent = [task.duration ? `${task.duration} min` : '',
+            p?.start != null ? `${clock(p.start)}${p.end > p.start ? `–${clock(p.end)}` : ''}${p.fixed ? ' · rigid' : p.moved ? ' · rescheduled' : ' · planned'}` : '',
+            task.time && task.timeKind !== 'deadline' && !p ? (task.rigid === false ? 'Flexible start' : 'Rigid start') : '',
+            task.time && task.timeKind === 'deadline' ? `Finish by ${task.time}` : '',
+            p?.start == null && task.duration && !p?.warning ? 'Not allocated' : '', p?.warning || ''].filter(Boolean).join(' · ');
+        summary.hidden = !summary.textContent;
+        const daily = isTodayList(ctx.columnListId) || isTomorrowList(ctx.columnListId);
+        element.querySelectorAll('.task-order-btn').forEach(b => { b.hidden = !daily; b.disabled = !!ctx.done || (!!task.time && task.timeKind !== 'deadline' && task.rigid !== false); });
+    }
+
+    async function moveDailyTask(task, ctx, direction) {
+        const list = findListById(ctx.columnListId); if (!list) return;
+        const day = isTodayList(list) ? getTodayIso() : getTomorrowIso();
+        const candidates = getDisplayList(list).tasks.filter(t => !(t._doneInToday ?? isTaskCompleted(t)) && (!t.time || t.timeKind === 'deadline' || t.rigid === false));
+        const ordered = priorityOrder(candidates, day);
+        const index = ordered.findIndex(t => t.id === task.id), next = index + direction;
+        if (index < 0 || next < 0 || next >= ordered.length) return;
+        [ordered[index], ordered[next]] = [ordered[next], ordered[index]];
+        await store.updateTasksBatch(ordered.map((t, i) => ({ listId: t._originListId || list.id, taskId: t.id,
+            updates: { dayOrder: { ...t.dayOrder, [day]: (i + 1) * POSITION_STEP } } })));
+        render();
     }
 
     function startInlineEdit(element, textElement, task, listId) {
@@ -2576,11 +2653,19 @@ export async function bootstrapTasksApp() {
 
     store.subscribeState((nextState) => {
         appState = nextState;
+        if (needsInitialTaskView) {
+            const todayList = nextState.lists.find(l => l.name.toLowerCase() === 'today');
+            if (todayList) {
+                needsInitialTaskView = false;
+                queueMicrotask(() => store.setActiveView(todayList.id));
+            }
+        }
         render();
     });
 
     store.subscribeAuth((user) => {
         currentUser = user;
+        needsInitialTaskView = true;
         refreshAuthUI();
     });
 
@@ -3032,6 +3117,7 @@ export async function bootstrapTasksApp() {
         if (document.visibilityState === 'visible') {
             triggerForegroundSync();
             refreshTimeBadges();
+            render();
         }
     });
 
@@ -3096,6 +3182,7 @@ export async function bootstrapTasksApp() {
     }, 60000);
 
     setInterval(refreshTimeBadges, 30000);
+    setInterval(() => { if (!document.hidden && dayPlanner.get(getTodayIso())) render(); }, 30000);
 
     // Completed one-offs are kept, struck through, until the end of their
     // completion day; the reaper deletes the expired ones. Checked on a slow
@@ -3112,6 +3199,8 @@ export async function bootstrapTasksApp() {
     render();
     await syncNativeConnectivityState();
     await store.bootstrap();
+    const initialToday = store.getState().lists.find(l => l.name.toLowerCase() === 'today');
+    if (initialToday) store.setActiveView(initialToday.id);
     isAuthBootstrapping = false;
     refreshAuthUI();
     store.reapExpiredCompletedTasks();

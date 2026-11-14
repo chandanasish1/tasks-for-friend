@@ -1,0 +1,76 @@
+/* Shared monochrome workspace. Typography follows the task list. */
+.app-dock { position: fixed; z-index: 220; bottom: 0; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #242424; background: #080808; }
+.app-dock button { font: 500 12px var(--font); letter-spacing: .06em; text-transform: uppercase; color: #888; border: 1px solid transparent; border-radius: 6px; padding: 12px 30px; background: transparent; min-width: 120px; cursor: pointer; }
+.app-dock [aria-current=page] { color: #fff; background: #171717; border-color: #333; }
+.sidebar-overlay:not(.active) { visibility: hidden; }
+#main { padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+#sidebar { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+body.focus-page #board, body.focus-page #mobileTabs, body.focus-page #sidebar, body.focus-page #topbar, body.focus-page #sidebarOverlay { display: none !important; }
+body.focus-page #main { margin-left: 0; width: 100%; padding-top: max(24px, env(safe-area-inset-top, 0px)); overflow-y: auto; }
+.pomo-page { width: min(860px, 100%); margin: 0 auto; padding: 24px; font-family: var(--font); color: var(--text); text-transform: uppercase; }
+.pomo-page[hidden] { display: none; }
+.pomo-page button, .task-plan-dialog button, .day-plan-controls button { background: #151515; color: #ddd; border: 1px solid #333; border-radius: 6px; padding: 10px 14px; font: 500 11px var(--font); letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
+.pomo-page button:hover, .task-plan-dialog button:hover { background: #252525; }
+.pomo-page button:focus-visible, .app-dock button:focus-visible, .task-plan-dialog button:focus-visible { outline: 2px solid #ddd; outline-offset: 3px; }
+.pomo-page button:disabled { opacity: .35; cursor: default; }
+.pomo-page .pomo-primary { background: #eee; color: #111; border-color: #eee; min-width: 140px; }
+.pomo-header, .pomo-progress-heading, .pomo-month-heading, .pomo-history-footer, .pomo-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pomo-header { margin-bottom: 32px; }
+.pomo-header h1 { font: 500 18px var(--font); letter-spacing: .08em; }
+.pomo-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+.pomo-timer { min-width: 0; padding: 40px 12px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.pomo-clock { font: 400 clamp(48px, 8vw, 64px)/1.2 var(--font); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.pomo-muted, .pomo-note, .pomo-day-detail, .pomo-footer, .pomo-history-footer { color: #888; font: 400 11px/1.7 var(--font); }
+.pomo-note { text-transform: none; max-width: 48ch; width: 100%; overflow-wrap: anywhere; }
+.pomo-task-title { max-width: 100%; overflow-wrap: anywhere; font-size: 12px; }
+.pomo-actions, .pomo-presets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.pomo-settings { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.pomo-settings h3, .pomo-history h3 { font: 500 12px var(--font); letter-spacing: .05em; }
+.pomo-presets { justify-content: flex-start; }
+.pomo-presets button { font-size: 10px; padding: 8px; }
+.pomo-page label, .task-plan-dialog label { display: flex; flex-direction: column; gap: 7px; font: 400 11px var(--font); color: #aaa; }
+.pomo-page input, .pomo-page select, .task-plan-dialog input, .task-plan-dialog select { min-width: 0; width: 100%; padding: 10px; border: 1px solid #333; border-radius: 5px; color: #eee; background: #0a0a0a; font: 400 12px var(--font); color-scheme: dark; }
+.pomo-page fieldset { border: 0; min-width: 0; }
+.pomo-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pomo-fields small { color: #777; }
+.pomo-page .pomo-check { flex-direction: row; align-items: center; margin-top: 16px; text-transform: none; }
+.pomo-check input { width: auto; accent-color: #eee; }
+.pomo-plan { font-size: 11px; color: #aaa; }
+.pomo-history { border-top: 1px solid #242424; margin-top: 28px; padding-top: 24px; }
+.pomo-history progress { width: 100%; height: 6px; margin: 14px 0 18px; accent-color: #ddd; }
+.pomo-goal-form { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+.pomo-goal-form label { flex: 1; min-width: 110px; }
+.pomo-month-heading { margin: 24px 0 14px; }
+.pomo-weekdays, .pomo-heatmap { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 6px; }
+.pomo-weekdays { font-size: 10px; text-align: center; color: #888; margin-bottom: 8px; }
+.pomo-heatmap button { min-width: 0; padding: 10px 3px; display: flex; flex-direction: column; gap: 8px; align-items: center; border-color: #292929; }
+.pomo-heatmap small { font-size: 9px; white-space: nowrap; }
+.pomo-heatmap [data-level="1"], .pomo-legend i:nth-of-type(2) { background: #303030; }
+.pomo-heatmap [data-level="2"], .pomo-legend i:nth-of-type(3) { background: #555; }
+.pomo-heatmap [data-level="3"], .pomo-legend i:nth-of-type(4) { background: #999; color: #111; }
+.pomo-heatmap [data-level="4"], .pomo-legend i:nth-of-type(5) { background: #eee; color: #111; }
+.pomo-heatmap [aria-pressed=true] { outline: 1px solid #fff; outline-offset: 2px; }
+.pomo-day-detail { margin: 14px 0; }
+.pomo-legend { display: flex; align-items: center; gap: 4px; font-size: 9px; }
+.pomo-legend i { width: 10px; height: 10px; border-radius: 1px; background: #181818; }
+.pomo-footer { margin-top: 24px; border-top: 1px solid #242424; padding-top: 16px; }
+.pomo-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+#pomoError { color: #ddd; margin-top: 12px; font-size: 12px; text-transform: none; }
+.task-plan-dialog { margin: auto; color: #eee; background: #090909; border: 1px solid #333; border-radius: 8px; padding: 24px; width: min(420px,calc(100% - 24px)); max-height: calc(100dvh - 32px); overflow: auto; font: 400 12px var(--font); }
+.task-plan-dialog::backdrop { background: #000b; }
+.task-plan-dialog form { display: flex; flex-direction: column; gap: 18px; }
+.task-plan-dialog [hidden] { display: none; }
+.task-plan-dialog header { display: flex; justify-content: space-between; align-items: center; }
+.task-plan-dialog h2 { font-size: 14px; font-weight: 500; }
+.task-plan-dialog p { font-size: 11px; color: #999; line-height: 1.7; text-transform: none; }
+.task-plan-dialog footer { display: flex; gap: 8px; justify-content: flex-end; }
+.task-schedule-summary { font-size: 10px; line-height: 1.7; color: #aaa; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.task-schedule-summary[data-warning=true] { color: #eee; }
+.task-time-badge.past-due { background: #181818; color: #ddd; border-color: #555; }
+.task-time-badge[hidden] { display: none; }
+.task-schedule-btn, .task-order-btn { background: transparent; color: #aaa; border: 0; padding: 5px; cursor: pointer; }
+.task-order-btn:disabled { opacity: .25; cursor: default; }
+.day-plan-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 16px; }
+.day-plan-controls span { width: 100%; font-size: 10px; color: #999; line-height: 1.6; text-transform: none; }
+.day-plan-controls input { min-width: 0; width: 100px; color-scheme: dark; background: #111; color: #ddd; border: 1px solid #333; padding: 8px; border-radius: 5px; font: 12px var(--font); }
+@media (max-width: 768px) { .pomo-page { padding: 16px; } .pomo-layout { grid-template-columns: 1fr; gap: 24px; } .pomo-timer { padding: 20px 8px; } .pomo-history-footer { align-items: flex-start; flex-direction: column; } .pomo-heatmap { gap: 4px; } .pomo-heatmap small { font-size: 8px; } .app-dock button { flex: 1; max-width: 200px; } body.focus-page #main { height: 100dvh; } }

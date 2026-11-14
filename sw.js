@@ -3,7 +3,7 @@
 // ============================================
 
 // Versioned by scripts/set-version.mjs — do not edit by hand.
-const CACHE_NAME = 'tasks-app-v1.13.0';
+const CACHE_NAME = 'tasks-app-v1.15.0';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -15,6 +15,13 @@ const STATIC_ASSETS = [
     '/src/config.mjs',
     '/src/main.mjs',
     '/src/store.mjs',
+    '/src/pomodoro.mjs',
+    '/src/pomodoro-store.mjs',
+    '/src/pomodoro-ui.mjs',
+    '/src/pomodoro-alerts.mjs',
+    '/src/day-plan.mjs',
+    '/src/schedule-ui.mjs',
+    '/src/workspace.css',
     '/src/utils.mjs',
     '/src/version.mjs'
 ];

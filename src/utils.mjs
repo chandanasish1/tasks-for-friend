@@ -1,3 +1,5 @@
+import { normalizeDuration, normalizeDayOrder } from './day-plan.mjs';
+
 export function uid() {
     try {
         if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -340,6 +342,10 @@ export function normalizeTask(task = {}) {
         details: task.details ?? task.notes ?? '',
         date: task.date ?? task.due_date ?? '',
         time: normalizeTime(task.time ?? task.due_time ?? ''),
+        duration: normalizeDuration(task.duration ?? task.duration_minutes),
+        timeKind: (task.timeKind ?? task.time_kind) === 'deadline' ? 'deadline' : 'start',
+        rigid: (task.rigid ?? task.is_rigid) !== false,
+        dayOrder: normalizeDayOrder(task.dayOrder ?? task.day_order),
         createdAt,
         updatedAt: task.updatedAt || task.updated_at || createdAt,
         version: normalizeVersion(task.version),

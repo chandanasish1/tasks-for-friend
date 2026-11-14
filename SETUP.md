@@ -24,7 +24,16 @@ In your project's dashboard, open **SQL Editor**, paste the entire contents of
 tables, the sync/versioning triggers, row-level security, and realtime — the
 whole backend in one shot.
 
+For an existing database, run [supabase/upgrade-day-planner.sql](supabase/upgrade-day-planner.sql)
+to add duration, start/deadline mode, rigidity and daily ordering. This is additive;
+existing tasks and owner-only access rules are retained. An authenticated SQL Editor
+session or database connection is required; a service-role data API key cannot run SQL migrations.
+
 ## 3. Create your login account
+
+For the Pomodoro timer's cloud history and daily goals, also run
+[`supabase/upgrade-pomodoro.sql`](supabase/upgrade-pomodoro.sql) in the SQL Editor.
+The timer works locally before this migration; cloud sync requires these tables.
 
 The app deliberately has **no sign-up screen** — accounts are created in the
 dashboard:
