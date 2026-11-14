@@ -49,6 +49,17 @@ export function mountPomodoro({ taskStore, supabase }) {
     document.querySelector('#main').append(dialog);
     const $ = selector => dialog.querySelector(selector);
     const form = $('#pomoConfig');
+    let landscape=false;
+    const capOrientation=window.Capacitor;
+    const landscapeButton=document.createElement('button');
+    landscapeButton.type='button';landscapeButton.textContent='Landscape';landscapeButton.setAttribute('aria-pressed','false');
+    if(capOrientation?.getPlatform?.()==='android' && capOrientation.isPluginAvailable?.('Companion')) dialog.querySelector('.pomo-header').insertBefore(landscapeButton,dialog.querySelector('[data-close]'));
+    async function setLandscape(enabled){
+        await capOrientation.nativePromise('Companion','landscape',{enabled});
+        landscape=enabled;document.body.classList.toggle('focus-landscape',enabled);
+        landscapeButton.textContent=enabled?'Exit landscape':'Landscape';landscapeButton.setAttribute('aria-pressed',String(enabled));
+    }
+    landscapeButton.onclick=()=>setLandscape(!landscape).catch(e=>{$('#pomoError').textContent=e.message;});
     let month = new Date(); month.setDate(1);
     let selectedDay = dayKey(Date.now());
     let lastHistory = '';
@@ -61,6 +72,7 @@ export function mountPomodoro({ taskStore, supabase }) {
     dock.querySelector('[data-page=tasks]').onclick = showTasks;
     dock.querySelector('[data-page=focus]').onclick = open;
     function showTasks() {
+        if(landscape)setLandscape(false).catch(console.warn);
         dialog.hidden = true; document.body.classList.remove('focus-page');
         dock.querySelector('[data-page=tasks]').setAttribute('aria-current', 'page');
         dock.querySelector('[data-page=focus]').removeAttribute('aria-current');

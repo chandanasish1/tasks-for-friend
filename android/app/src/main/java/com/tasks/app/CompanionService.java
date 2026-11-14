@@ -116,6 +116,7 @@ public class CompanionService extends Service {
             public boolean onTouch(View v,MotionEvent e){
                 switch(e.getActionMasked()){
                     case MotionEvent.ACTION_DOWN:
+                        if(dog instanceof PixelDogView)((PixelDogView)dog).touch();
                         handler.removeCallbacks(finishTaps);x=e.getRawX();y=e.getRawY();px=dogParams.x;py=dogParams.y;moved=false;held=false;
                         handler.postDelayed(hold,650);return true;
                     case MotionEvent.ACTION_MOVE:

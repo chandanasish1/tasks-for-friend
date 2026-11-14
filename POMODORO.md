@@ -29,3 +29,7 @@ On the web, Enable interval alerts requests browser notification permission and 
 `node tests/pomodoro.browser.cjs` requires Playwright and Chrome. It runs an isolated local-mode test without real account data, covering desktop/mobile controls, presets, validation, pause/reload, goals and history navigation.
 
 Build Android with the existing Capacitor sync workflow and Gradle. Installation is a separate step; preserve the app's existing data and signing identity.
+
+## Android landscape timer (1.19.0)
+
+Open Focus and tap **Landscape**. The Android activity rotates to sensor landscape and shows a dedicated large timer, phase, session, selected task, and start/pause/resume/end controls. Configuration and history stay on the regular Focus page. **Exit landscape** restores the prior orientation setting; **Back to tasks** also leaves the dedicated layout. Rotating does not restart or modify the timer. Verified on the connected Android phone, including returning to the regular task view.

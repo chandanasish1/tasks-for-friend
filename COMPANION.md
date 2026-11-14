@@ -32,3 +32,9 @@ Verified on the connected Realme Android phone: overlay attached and visually pr
 Replaced the double-tap-only detector with separate pet, Today and Focus actions. The launch keeps the overlay visible while requesting the activity, and a native-to-web route selects the requested page even when Tasks was already open. Single taps produce animated hearts, happy eyes, a bounce, a wag and a speech bubble; idle animation adds curious head tilts. A welcome bubble explains the gestures. Speech bubbles do not depend on a running focus window. Actual Focus timer intervals now enable native nudges and pause/break/end updates clear that timer window.
 
 Verified on the connected phone: single-tap pet animation and speech visible; double tap from another app opens Today; triple tap opens Focus; double tap from Focus returns to Today; triple tap from the home screen opens Focus. JavaScript suite (47 tests), Android tests, APK build and lint passed.
+
+## Spaniel redesign and idle behavior (1.19.0)
+
+Original ivory-and-ink floppy-eared dog with a cherry collar, cool shadows and a small gold tag. Separate head, ear, tail and body poses replace the old tan sprite. It blinks and looks around, yawns after 40 seconds without touch, lowers itself from 45 seconds, and sleeps after 50 seconds. Sleeping has gentle breathing and a floating Z. Touch wakes it with a 1.4-second stretch; a single tap adds the happy petting reaction. Touching/dragging resets inactivity. Idle time survives overlay removal/recreation while the app process lives. Sleeping does not disable gestures or nudges.
+
+Device verification: sleeping curled pose visible; a tap wakes it and triggers petting/hearts/speech. Landscape Focus layout and return to tasks visually checked. 47 JavaScript tests and Android tests pass; APK build and lint pass.

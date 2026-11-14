@@ -6,6 +6,17 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 @CapacitorPlugin(name = "Companion")
 public class CompanionPlugin extends Plugin {
+    private Integer previousOrientation;
+    @PluginMethod public void landscape(PluginCall call) {
+        boolean enabled=Boolean.TRUE.equals(call.getBoolean("enabled",false));
+        getActivity().runOnUiThread(()->{
+            if(enabled){
+                if(previousOrientation==null)previousOrientation=getActivity().getRequestedOrientation();
+                getActivity().setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+            } else if(previousOrientation!=null){getActivity().setRequestedOrientation(previousOrientation);previousOrientation=null;}
+            call.resolve();
+        });
+    }
     @PluginMethod public void syncFocus(PluginCall call) {
         getContext().getSharedPreferences("companion",0).edit().putLong("timerUntil",call.getLong("until",0L)).apply();call.resolve();
     }
