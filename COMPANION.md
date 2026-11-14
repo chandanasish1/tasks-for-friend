@@ -20,3 +20,9 @@ Play distribution would require declaring the special-use foreground service and
 
 Run `npm test`, `node --test tests/companion.test.mjs`, and `gradlew testDebugUnitTest assembleDebug lintDebug` after Capacitor sync. Device checks: initial permissions, chosen-app visibility, double tap, dragging, excluded app transition, screen off/lock, focus nudge/cooldown/break, Stop notification and revocation. Banking acceptance must be checked by the owner in their actual bank apps; never automate authentication or transactions.
 
+
+## 1.17.2 overlay recovery
+
+Foreground detection now replays overlapping usage-event windows, including a longer startup history, so delayed events or starting after the current activity resumed do not leave the dog hidden. Activity matching prevents an older activity stopping from clearing its replacement within the same app. Service diagnostics expose attachment state and errors without task contents.
+
+Verified on the connected Realme Android phone: overlay attached and visually present on the home screen; detached in Android Settings; reattached on returning home. Android unit tests, build and lint passed. Banking acceptance remains unverified.

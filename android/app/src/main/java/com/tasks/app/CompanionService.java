@@ -19,27 +19,31 @@ public class CompanionService extends Service {
     private WindowManager.LayoutParams dogParams;
     private SharedPreferences prefs;
     private String foreground="";
+    private final ForegroundTracker tracker=new ForegroundTracker();
+    private String lastError="";
+    private int eventCount;
     private long lastQuery, lastNudge;
     private final Runnable dismissBubble=()->hideBubble();
     private final Runnable poll=new Runnable(){public void run(){
         if(!Settings.canDrawOverlays(CompanionService.this)||!CompanionActivity.usageAllowed(CompanionService.this)) {stopSelf();return;}
         PowerManager power=(PowerManager)getSystemService(POWER_SERVICE);
         KeyguardManager lock=(KeyguardManager)getSystemService(KEYGUARD_SERVICE);
-        if(!power.isInteractive()||lock.isKeyguardLocked()){ hideAll(); foreground=""; lastQuery=0;handler.postDelayed(this,1000);return; }
+        if(!power.isInteractive()||lock.isKeyguardLocked()){ hideAll(); foreground=""; tracker.clear(); lastQuery=0;handler.postDelayed(this,1000);return; }
         long now=System.currentTimeMillis();
         try {
             UsageStatsManager usage=(UsageStatsManager)getSystemService(USAGE_STATS_SERVICE);
-            UsageEvents events=usage.queryEvents(lastQuery==0?now-10000:lastQuery,now);
+            UsageEvents events=usage.queryEvents(ForegroundTracker.queryStart(now,lastQuery==0),now);
             lastQuery=now;
-            if(events==null){foreground="";} else {
+            eventCount=0;
+            if(events==null){tracker.clear();} else {
                 UsageEvents.Event e=new UsageEvents.Event();
                 while(events.hasNextEvent()) {
                     events.getNextEvent(e);
-                    if(e.getEventType()==UsageEvents.Event.ACTIVITY_RESUMED)foreground=e.getPackageName();
-                    else if((e.getEventType()==UsageEvents.Event.ACTIVITY_PAUSED||e.getEventType()==UsageEvents.Event.ACTIVITY_STOPPED)
-                        && e.getPackageName().equals(foreground)) foreground="";
+                    eventCount++;
+                    tracker.accept(e.getEventType(),e.getPackageName(),e.getClassName());
                 }
             }
+            foreground=tracker.app;
             int mode=prefs.getInt("app:"+foreground,CompanionPolicy.DEFAULT_MODE);
             if(!CompanionPolicy.visible(foreground,mode,true,prefs.getLong("snooze",0),now))hideAll();
             else {
@@ -50,7 +54,7 @@ public class CompanionService extends Service {
                 }
                 if(mode!=2 || prefs.getLong("focusUntil",0)<=now || prefs.getString("task","").isEmpty())hideBubble();
             }
-        } catch(RuntimeException e){foreground="";hideAll();}
+        } catch(RuntimeException e){lastError=e.toString();android.util.Log.e("PixelCompanion","Polling failed",e);foreground="";tracker.clear();hideAll();}
         handler.postDelayed(this,500);
     }};
     @Override public void onCreate(){
@@ -96,7 +100,7 @@ public class CompanionService extends Service {
                 return true;
             }
         });
-        try{windows.addView(dog,dogParams);}catch(RuntimeException e){dog=null;}
+        try{windows.addView(dog,dogParams);lastError="";}catch(RuntimeException e){lastError=e.toString();android.util.Log.e("PixelCompanion","Overlay creation failed",e);dog=null;}
     }
     private void clampDog(){
         android.util.DisplayMetrics m=getResources().getDisplayMetrics();
@@ -120,4 +124,7 @@ public class CompanionService extends Service {
     private void hideAll(){hideBubble();if(dog!=null){try{windows.removeViewImmediate(dog);}catch(RuntimeException ignored){}dog=null;}}
     @Override public void onDestroy(){running=false;handler.removeCallbacksAndMessages(null);hideAll();stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();}
     @Override public IBinder onBind(Intent i){return null;}
+    @Override protected void dump(java.io.FileDescriptor fd,java.io.PrintWriter out,String[] args){
+        out.println("PixelCompanion foreground="+foreground+" activity="+tracker.activity+" events="+eventCount+" dogAttached="+(dog!=null)+" lastError="+lastError);
+    }
 }
