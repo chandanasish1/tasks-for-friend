@@ -8,15 +8,11 @@ import android.view.View;
 /** Original pixel artwork: ivory spaniel, ink ears and a cherry collar. */
 public class PixelDogView extends View {
     private final Paint paint=new Paint();
-    private final Bitmap friendPixels=Bitmap.createBitmap(64,48,Bitmap.Config.ARGB_8888);
-    private final Canvas friendCanvas=new Canvas(friendPixels);
-    private final Paint pixelScale=new Paint();
-    private static long movingUntil;
-    public void move(){touch();movingUntil=SystemClock.uptimeMillis()+600;}
+    private final ReferencePetRenderer referenceRenderer;
     private static long lastTouch=SystemClock.uptimeMillis(), wakeUntil, happyUntil;
     private static final int INK=Color.rgb(29,34,49), EAR=Color.rgb(54,65,87), LIGHT=Color.rgb(250,248,239), SHADE=Color.rgb(192,202,214), RED=Color.rgb(217,57,85), PINK=Color.rgb(244,139,157);
     public PixelDogView(Context context){
-        super(context);setContentDescription("Pixel spaniel. Tap to pet, double tap for Today, triple tap for Focus. Drag to move; hold for settings.");
+        super(context);referenceRenderer=new ReferencePetRenderer(context);setContentDescription("Pixel spaniel. Tap to pet, double tap for Today, triple tap for Focus. Drag to move; hold for settings.");
         setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);setFocusable(true);setClickable(true);
     }
     public void touch(){
@@ -38,8 +34,8 @@ public class PixelDogView extends View {
         int frame=(int)(now/(happy?100:240));
         String species=getContext().getSharedPreferences("companion",0).getString("species","spaniel");
         if(!species.equals("spaniel")){
-            drawFriend(c,species.equals("calico"),now,idle,settle,happy,waking,mood,frame);
-            postInvalidateDelayed(happy||waking||mood.equals("settle")?100:mood.equals("sleep")?500:180);return;
+            referenceRenderer.draw(c,getWidth(),getHeight(),species,PetAnimation.state(idle,waking,happy),now);
+            postInvalidateDelayed(80);return;
         }
         c.save();float scale=Math.min(getWidth()/40f,getHeight()/36f);c.translate((getWidth()-40*scale)/2,(getHeight()-36*scale)/2);c.scale(scale,scale);
         // A small cool shadow anchors the sprite; the silhouette stays pixel aligned.
@@ -93,92 +89,6 @@ public class PixelDogView extends View {
             if(happy){heart(c,4,3-frame%3);heart(c,29,5-frame%3);}
         }
         c.restore();postInvalidateDelayed(happy||waking||mood.equals("settle")?100:mood.equals("sleep")?500:180);
-    }
-    /** Reference-inspired corgi and calico artwork rendered on a true 64x48 pixel grid. */
-    private void drawFriend(Canvas target,boolean cat,long now,long idle,float settle,boolean happy,boolean waking,String mood,int frame){
-        friendPixels.eraseColor(Color.TRANSPARENT);Canvas c=friendCanvas;
-        int outline=Color.rgb(53,34,38), orange=Color.rgb(237,147,57), bright=Color.rgb(255,185,85), rust=Color.rgb(185,89,49), cream=Color.rgb(255,239,204), white=Color.rgb(253,248,230), black=Color.rgb(47,49,59), shadow=Color.rgb(205,188,177);
-        int coat=cat?white:orange;
-        boolean asleep=mood.equals("sleep"),moving=now<movingUntil;
-        rect(c,Color.argb(50,27,24,34),12,44,47,2);
-        if(settle>.8f){
-            int breath=(now/1800)%2==0?0:1;
-            shape(c,outline,16,34,21,28,35,26,45,29,51,35,51,41,46,44,20,44,14,40);
-            shape(c,coat,18,34,23,30+breath,34,28+breath,43,31,47,36,47,41,22,42,17,39);
-            if(cat){shape(c,orange,21,30,29,28,31,33,27,37,19,37);shape(c,black,32,29,40,30,43,34,37,36,32,33);}
-            else {shape(c,bright,22,31,32,29,38,31,36,33,23,34);shape(c,cream,24,39,39,37,45,40,42,42,24,42);}
-            // Tail curls around the sleeping body instead of wagging through it.
-            shape(c,outline,15,33,12,36,13,42,19,45,35,45,38,42,36,39,28,40,28,42,20,42,16,39,17,35);
-            shape(c,cat?black:orange,15,36,15,40,20,43,34,43,35,41,28,42,20,41,17,39,17,35);
-            if(cat){rect(c,orange,20,42,5,2);rect(c,white,30,41,4,2);}
-            // Face resting on forepaws, ears relaxed sideways.
-            shape(c,outline,40,30,46,29,49,32,55,33,59,37,58,41,53,44,43,43,39,40);
-            shape(c,cat?white:orange,42,32,46,31,49,34,54,35,56,37,56,40,51,42,44,41,41,39);
-            shape(c,outline,40,31,39,26,44,29,46,32);shape(c,orange,41,29,42,31,44,31);
-            if(cat){shape(c,black,48,30,53,27,54,34,50,36);shape(c,orange,42,32,46,32,47,35,43,37);}
-            rect(c,outline,48,37,4,1);rect(c,outline,56,37,2,2);rect(c,white,46,42,10,1);
-            if(asleep){int z=(int)(now/800%3);rect(c,cream,48,15-z,5,1);rect(c,cream,51,16-z,1,1);rect(c,cream,50,17-z,1,1);rect(c,cream,49,18-z,1,1);rect(c,cream,48,19-z,5,1);}
-        } else {
-            c.save();c.translate(0,44);c.scale(1,1-settle*.24f);c.translate(0,-44);
-            int bounce=happy?(frame%4<2?-1:0):moving?(frame%2):0;
-            c.translate(0,bounce);
-            // Breed-specific tail: long hooked calico tail, compact corgi curl.
-            if(cat){
-                int sway=frame%12<6?0:2;
-                shape(c,outline,21,38,15,38,11,34,10,25,12,21,16+sway,21,18+sway,24,16+sway,26,14,24,13,26,14,32,18,34,23,34);
-                shape(c,black,20,36,15,36,12,33,12,25,14,23,16+sway,23,16+sway,24,13,26,14,32,18,35,21,35);
-                rect(c,orange,12,29,2,4);rect(c,orange,14,34,3,2);
-            } else {
-                int wag=happy?frame%3:frame%10<5?0:1;
-                shape(c,outline,21,32,15,30,13,26-wag,15,22-wag,20,22-wag,23,25,21,28,18,27,17,25,16,27,19,29,23,29);
-                shape(c,bright,20,31,16,29,15,26-wag,16,24-wag,19,24-wag,21,26,19,26,17,25,17,28,22,30);
-            }
-            if(moving){
-                shape(c,outline,18,28,40,26,47,29,46,36,40,39,20,38,16,34);
-                shape(c,coat,20,29,39,28,44,30,44,35,39,37,20,36,18,33);
-                int stride=frame%2==0?3:-2;
-                shape(c,outline,20,35,25,35,24+stride,41,20+stride,44,16+stride,44,19+stride,41);
-                shape(c,coat,21,36,23,36,22+stride,41,19+stride,43,18+stride,42);
-                shape(c,outline,37,35,42,35,45-stride,41,49-stride,42,49-stride,44,43-stride,44,39,40);
-                shape(c,white,39,36,41,36,43-stride,41,47-stride,43,44-stride,43,40,39);
-            } else {
-                shape(c,outline,27,24,40,24,44,29,43,39,39,44,22,44,18,41,19,35,23,30);
-                shape(c,coat,28,26,39,26,42,30,41,38,37,42,23,42,20,40,21,35,25,31);
-                shape(c,cat?orange:rust,22,35,27,33,30,35,30,40,27,42,23,41,21,39);
-                shape(c,white,35,28,40,29,40,39,42,41,42,43,35,43,34,40);
-                rect(c,outline,34,43,9,1);rect(c,shadow,36,41,2,2);
-                rect(c,cream,25,42,6,1);
-            }
-            if(cat){shape(c,orange,26,27,32,25,35,28,32,32,27,32);shape(c,black,20,30,26,28,28,33,24,35,20,34);}
-            else {shape(c,bright,25,29,30,27,34,28,32,30,25,32);shape(c,cream,37,25,43,27,41,33,37,35,34,32);}
-            // Upright ears and side-profile muzzle, matching the reference silhouettes.
-            int look=idle%15000<1500?1:0;
-            c.save();c.translate(look,0);
-            shape(c,outline,34,14,32,4,35,3,41,9,46,9,52,3,54,4,53,15,56,20,60,22,60,26,54,29,49,31,39,29,34,24);
-            shape(c,coat,36,14,34,6,36,6,41,12,46,11,51,6,52,6,51,15,54,21,58,23,57,26,53,27,48,29,40,27,36,23);
-            shape(c,PINK,35,7,39,12,36,13);shape(c,PINK,49,12,51,7,51,13);
-            if(cat){shape(c,black,32,4,35,3,40,9,40,16,36,18,34,14);shape(c,orange,43,11,48,10,51,14,49,19,44,18);}
-            else {shape(c,bright,38,14,41,12,45,13,44,16,39,17);}
-            shape(c,white,46,20,50,20,53,22,58,23,57,26,52,28,48,26,44,25);
-            rect(c,outline,57,22,3,2);
-            boolean closed=happy||waking||mood.equals("yawn")||now%6000<160;
-            if(closed)rect(c,outline,48,17,4,1);
-            else {rect(c,outline,49,16,2,3);rect(c,white,49,16,1,1);}
-            if(mood.equals("yawn")){rect(c,outline,52,25,4,4);rect(c,PINK,53,27,2,2);}
-            else {rect(c,outline,53,26,3,1);if(happy){rect(c,PINK,53,27,2,2);}}
-            if(cat){rect(c,shadow,53,24,5,1);rect(c,shadow,52,26,5,1);}
-            c.restore();
-            // Calico grooming paw; corgi offers a paw when petted.
-            if(happy || (cat&&idle%18000>14500&&idle%18000<16500)){
-                shape(c,outline,37,35,39,30,43,27,46,28,45,31,41,34,40,38);
-                shape(c,white,39,34,40,31,44,29,44,30,40,34,39,37);
-            }
-            c.restore();
-            if(happy){heart(c,21,10-frame%3);heart(c,55,6-frame%3);}
-        }
-        float scale=Math.min(getWidth()/64f,getHeight()/48f);
-        float left=(getWidth()-64*scale)/2,top=(getHeight()-48*scale)/2;
-        pixelScale.setFilterBitmap(false);target.drawBitmap(friendPixels,null,new RectF(left,top,left+64*scale,top+48*scale),pixelScale);
     }
     @Override public boolean performClick(){super.performClick();return true;}
 }

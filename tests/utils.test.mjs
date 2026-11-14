@@ -28,7 +28,10 @@ test('normalizeTask maps completed_at from the server row', () => {
 test('completion helpers: done, day-scoped done, and midnight expiry', () => {
     const now = Date.now();
     const doneNow = { completedAt: new Date(now).toISOString() };
-    const doneYesterday = { completedAt: new Date(now - 25 * 3600 * 1000).toISOString() };
+    const yesterdayNoon = new Date(now);
+    yesterdayNoon.setDate(yesterdayNoon.getDate() - 1);
+    yesterdayNoon.setHours(12, 0, 0, 0);
+    const doneYesterday = { completedAt: yesterdayNoon.toISOString() };
 
     assert.equal(isTaskCompleted(doneNow), true);
     assert.equal(isTaskCompleted({ completedAt: '' }), false);

@@ -1,7 +1,7 @@
 import { tasksForDay, localDay } from './task-reminders.mjs';
 
 export function companionTask(lists, now = Date.now()) {
-    const candidates = tasksForDay(lists, localDay(now)).filter(t => !t._doneInToday && !t.completedAt);
+    const candidates = tasksForDay(lists, localDay(now), localDay(now)).filter(t => !t._doneInToday && !t.completedAt);
     candidates.sort((a,b) => {
         const deadline = t => t.timeKind === 'deadline' && t.time ? t.time : '99:99';
         return deadline(a).localeCompare(deadline(b)) || (a.position || 0) - (b.position || 0);
@@ -28,8 +28,8 @@ export function mountCompanion(store) {
         } finally {routing=false;}
     };
     const button = document.createElement('button');
-    button.type = 'button'; button.className = 'alerts-button'; button.textContent = 'Pixel pup';
-    document.querySelector('.app-dock').append(button);
+    button.type = 'button'; button.className = 'settings-action'; button.textContent = 'Pixel pup';
+    document.querySelector('#appSettingsActions').append(button);
     let queue = Promise.resolve();
     const sync = () => {
         const next = store.getCurrentUser() ? companionTask(store.getState().lists) : {title:'',detail:''};

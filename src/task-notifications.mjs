@@ -5,8 +5,8 @@ export function mountTaskNotifications({ store, plannedTasks }) {
     const cap = window.Capacitor;
     const native = !!(cap?.isNativePlatform?.() && cap?.isPluginAvailable?.('LocalNotifications'));
     const call = (method, args = {}) => cap.nativePromise('LocalNotifications',method,args);
-    const button = document.createElement('button'); button.type='button'; button.className='alerts-button'; button.textContent='Alerts';
-    document.querySelector('.app-dock').append(button);
+    const button = document.createElement('button'); button.type='button'; button.className='settings-action'; button.textContent='Alerts';
+    document.querySelector('#appSettingsActions').append(button);
     const dialog=document.createElement('dialog'); dialog.className='task-plan-dialog notification-dialog';
     dialog.innerHTML=`<header><h2>Notifications</h2><button type="button" data-close aria-label="Close notifications">×</button></header>
       <p>Task starts, planned duration ends, deadlines, and daily routines. Focus interval alerts are available on the Focus page.</p>

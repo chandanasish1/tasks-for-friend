@@ -49,6 +49,31 @@ public class CompanionActivity extends Activity {
             if(id>=100&&id<=102){prefs.edit().putString("species",companionIds[id-100]).apply();dog.touch();dog.invalidate();}
         });
         body.addView(companions);
+        TextView sizeLabel=text("",16);
+        SeekBar sizeSlider=new SeekBar(this);sizeSlider.setMax(14);
+        sizeSlider.setContentDescription("Pet size, from 60 to 200 percent");
+        sizeSlider.setProgress((PetAnimation.size(prefs.getInt("petSize",80))-48)/8);
+        sizeLabel.setText("Pet size: "+(60+sizeSlider.getProgress()*10)+"%");
+        sizeSlider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            public void onProgressChanged(SeekBar bar,int progress,boolean fromUser){
+                int size=48+progress*8;sizeLabel.setText("Pet size: "+(60+progress*10)+"%");
+                prefs.edit().putInt("petSize",size).apply();
+                dog.setLayoutParams(new LinearLayout.LayoutParams(dp(size),dp(size)));
+            }
+            public void onStartTrackingTouch(SeekBar bar){}
+            public void onStopTrackingTouch(SeekBar bar){}
+        });
+        body.addView(sizeSlider);
+        dog.setLayoutParams(new LinearLayout.LayoutParams(dp(48+sizeSlider.getProgress()*8),dp(48+sizeSlider.getProgress()*8)));
+        LinearLayout sizeActions=new LinearLayout(this);
+        Button smaller=new Button(this);smaller.setText("Smaller −");smaller.setAllCaps(false);
+        Button larger=new Button(this);larger.setText("Larger +");larger.setAllCaps(false);
+        sizeActions.addView(smaller,new LinearLayout.LayoutParams(0,-2,1));sizeActions.addView(larger,new LinearLayout.LayoutParams(0,-2,1));body.addView(sizeActions);
+        smaller.setOnClickListener(v->sizeSlider.setProgress(Math.max(0,sizeSlider.getProgress()-1)));
+        larger.setOnClickListener(v->sizeSlider.setProgress(Math.min(14,sizeSlider.getProgress()+1)));
+        button("Animation behavior", () -> new AlertDialog.Builder(this).setTitle("How your companion behaves")
+            .setMessage("No walking or running. Dragging only moves the pet. Soft contact shadows anchor the paws; petting adds a small body pulse and rising hearts.\n\n0-80 seconds: gently breathing idle.\n80-85 seconds: yawn (corgi) or groom (calico).\n85-90 seconds: lie down.\n90 seconds onward: slow breathing and drifting sleep marks.\n\nTouch resets the idle clock. Waking takes 1.4 seconds, then a single tap gives a 3.5-second pet reaction. Double tap opens Today; triple tap opens Focus. Switching companion resets the idle clock.")
+            .setPositiveButton("Got it",null).show());
         text("All three share your tap shortcuts and focus nudges. They settle after 85 seconds without touch and sleep at 90 seconds.",14);
         text("Your pixel pup stays nearby in all apps by default. Use App exceptions to hide it in individual apps. Tap to pet, double-tap for Today, triple-tap for Focus. Drag to move, or hold for these controls.", 16);
         status = text("", 15);

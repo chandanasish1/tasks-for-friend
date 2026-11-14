@@ -3,7 +3,7 @@
 // ============================================
 
 // Versioned by scripts/set-version.mjs — do not edit by hand.
-const CACHE_NAME = 'tasks-app-v1.20.0';
+const CACHE_NAME = 'tasks-app-v1.22.0';
 const STATIC_ASSETS = [
     '/',
     '/index.html',

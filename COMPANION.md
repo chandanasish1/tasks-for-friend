@@ -44,3 +44,24 @@ Device verification: sleeping curled pose visible; a tap wakes it and triggers p
 In **Pixel pup > Choose your companion**, select Spaniel, Corgi or Calico cat. Selection is saved on this device and applies to an existing overlay without restarting it. The original spaniel remains the default. Corgi and calico are original reference-inspired pixel drawings on a 64x48 nearest-neighbor canvas, with distinct coats, ears, tails and resting poses. They share petting, Today/Focus gestures, nudges and privacy exceptions. Dragging animates a moving gait; calico also has an idle grooming motion.
 
 All three now yawn at 80 seconds without touch, settle from 85 seconds and sleep at 90 seconds. Touch/drag resets this idle period and wakes a resting companion. Timing boundary tests verify 50 seconds is awake, 89.999 seconds is still settling, and 90 seconds is sleep. Selector and both new previews were visually checked on the connected phone; Android tests, APK build and lint passed.
+
+## Reference sprites, animation rules and sizing (1.21.0)
+
+The previous corgi/calico redraws and all locomotion code have been removed. `android/app/src/main/assets/pets/` contains the user's two original sheets unchanged. `ReferencePetRenderer` clips only idle, pet, preparation, lying, sleeping and wake/stretch poses. It keys the blue/slate background, retains the largest connected sprite to discard labels/artifacts, preserves source foreground RGB, and uses nearest-neighbor rendering with a fixed source scale and shared baseline. Movement-row frames are never loaded. These are pose transitions, not interpolated walking/running cycles.
+
+### Deterministic behavior
+
+1. Wake/stretch has highest priority for 1.4 seconds after touching a resting pet.
+2. A confirmed single tap gives 3.5 seconds of pet reaction after waking (corgi happy pose; calico sitting pose with hearts). Double/triple taps still route to Today/Focus.
+3. Otherwise time since the last touch chooses idle [0,80 seconds), preparation [80,85), lying [85,90), or sleep [90,infinity). Preparation uses the corgi yawn or calico grooming pose. Sleeping has only a subtle one-source-pixel breathing offset.
+4. Dragging repositions the overlay and cancels taps; no walking, running or jumping pose is triggered. Touch resets the idle timer. There is no random animation selection.
+
+**Pet size** offers 60–200% of the default through a slider and Smaller/Larger buttons. The saved value is bounded to 48–160 dp in 8-dp steps. Preview and running overlay resize immediately; the overlay position is clamped to the screen, including orientation changes. The **Animation behavior** button explains the rules in-app.
+
+Device checks: original idle corgi and calico visually verified; live overlay increased from 280 to 308 physical pixels at 100→110%, then returned to 280 at 100%. Android build, unit tests and lint passed. Unit tests cover state boundaries, wake/pet precedence and size limits.
+
+## Lively reference companions and quieter dock (1.22.0)
+
+Corgi and calico retain the approved reference artwork. Breathing scales the sprite height by roughly one source pixel with a fixed paw baseline: 3.4-second awake cycles, 4.6-second sleeping cycles. A two-band translucent contact shadow grounds the pet. Pet reactions add a small body pulse and two drifting hearts; sleep adds a fading pixel Z on a three-second cycle. Rendering updates every 80 ms, without walking/running or automatic overlay travel. Sleep still starts at 90 seconds; size controls remain 60–200%.
+
+Pixel pup and Alerts moved from the bottom dock to Settings near the bottom of the scrollable side menu. The dock now contains only Tasks and Focus. Device navigation to the new Pixel pup entry was verified. All 47 JavaScript tests, Android unit tests, APK build and lint pass. The JavaScript checks also fixed an injected-clock mismatch in companion task selection and a test fixture that assumed subtracting 25 hours always meant yesterday.

@@ -102,12 +102,16 @@ public class CompanionService extends Service {
         android.graphics.drawable.GradientDrawable bg=new android.graphics.drawable.GradientDrawable();bg.setColor(Color.rgb(255,245,222));bg.setCornerRadius(dp(14));label.setBackground(bg);
         WindowManager.LayoutParams p=params(Math.min(dp(260),getResources().getDisplayMetrics().widthPixels-dp(24)),WindowManager.LayoutParams.WRAP_CONTENT);
         p.x=Math.max(dp(12),Math.min(dogParams==null?dp(12):dogParams.x,getResources().getDisplayMetrics().widthPixels-p.width-dp(12)));
-        p.y=Math.max(dp(40),Math.min(dogParams==null?dp(80):dogParams.y+dp(90),getResources().getDisplayMetrics().heightPixels-dp(240)));
+        p.y=Math.max(dp(40),Math.min(dogParams==null?dp(80):dogParams.y+dogParams.height+dp(10),getResources().getDisplayMetrics().heightPixels-dp(240)));
         bubble=label;try{windows.addView(label,p);handler.postDelayed(dismissBubble,5000);}catch(RuntimeException e){bubble=null;lastError=e.toString();}
     }
     private void showDog(){
-        if(dog!=null)return;
-        dog=new PixelDogView(this);dogParams=params(dp(80),dp(80));
+        int size=dp(PetAnimation.size(prefs.getInt("petSize",80)));
+        if(dog!=null){
+            if(dogParams.width!=size){dogParams.width=size;dogParams.height=size;clampDog();windows.updateViewLayout(dog,dogParams);hideBubble();}
+            return;
+        }
+        dog=new PixelDogView(this);dogParams=params(size,size);
         dogParams.x=prefs.getInt("x",0);dogParams.y=prefs.getInt("y",dp(220));clampDog();
         dog.setOnClickListener(v->handleTaps(1));
         dog.setOnTouchListener(new View.OnTouchListener(){
@@ -123,7 +127,7 @@ public class CompanionService extends Service {
                         if(Math.abs(e.getRawX()-x)+Math.abs(e.getRawY()-y)>ViewConfiguration.get(CompanionService.this).getScaledTouchSlop()){
                             moved=true;taps.cancel();handler.removeCallbacks(hold);
                         }
-                        if(moved&&dog!=null){if(dog instanceof PixelDogView)((PixelDogView)dog).move();dogParams.x=px+(int)(e.getRawX()-x);dogParams.y=py+(int)(e.getRawY()-y);clampDog();windows.updateViewLayout(dog,dogParams);}
+                        if(moved&&dog!=null){dogParams.x=px+(int)(e.getRawX()-x);dogParams.y=py+(int)(e.getRawY()-y);clampDog();windows.updateViewLayout(dog,dogParams);}
                         return true;
                     case MotionEvent.ACTION_UP:
                         handler.removeCallbacks(hold);
@@ -139,8 +143,8 @@ public class CompanionService extends Service {
     }
     private void clampDog(){
         android.util.DisplayMetrics m=getResources().getDisplayMetrics();
-        dogParams.x=Math.max(0,Math.min(dogParams.x,m.widthPixels-dp(80)));
-        dogParams.y=Math.max(dp(28),Math.min(dogParams.y,m.heightPixels-dp(120)));
+        dogParams.x=Math.max(0,Math.min(dogParams.x,m.widthPixels-dogParams.width));
+        dogParams.y=Math.max(dp(28),Math.min(dogParams.y,m.heightPixels-dogParams.height-dp(40)));
     }
     private void showNudge(){
         hideBubble(); nudgeBubble=true; LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(16),dp(12),dp(16),dp(12));
@@ -158,8 +162,11 @@ public class CompanionService extends Service {
     private void hideBubble(){handler.removeCallbacks(dismissBubble);if(bubble!=null){try{windows.removeViewImmediate(bubble);}catch(RuntimeException ignored){}bubble=null;}}
     private void hideAll(){handler.removeCallbacks(finishTaps);taps.cancel();hideBubble();if(dog!=null){try{windows.removeViewImmediate(dog);}catch(RuntimeException ignored){}dog=null;}}
     @Override public void onDestroy(){running=false;handler.removeCallbacksAndMessages(null);hideAll();stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy();}
+    @Override public void onConfigurationChanged(android.content.res.Configuration config){
+        super.onConfigurationChanged(config);if(dog!=null){clampDog();windows.updateViewLayout(dog,dogParams);hideBubble();}
+    }
     @Override public IBinder onBind(Intent i){return null;}
     @Override protected void dump(java.io.FileDescriptor fd,java.io.PrintWriter out,String[] args){
-        out.println("PixelCompanion foreground="+foreground+" activity="+tracker.activity+" events="+eventCount+" dogAttached="+(dog!=null)+" gesture="+lastGesture+" lastError="+lastError);
+        out.println("PixelCompanion foreground="+foreground+" activity="+tracker.activity+" events="+eventCount+" dogAttached="+(dog!=null)+" size="+(dogParams==null?0:dogParams.width)+" gesture="+lastGesture+" lastError="+lastError);
     }
 }
