@@ -40,7 +40,7 @@ public class CompanionService extends Service {
                         && e.getPackageName().equals(foreground)) foreground="";
                 }
             }
-            int mode=prefs.getInt("app:"+foreground,0);
+            int mode=prefs.getInt("app:"+foreground,CompanionPolicy.DEFAULT_MODE);
             if(!CompanionPolicy.visible(foreground,mode,true,prefs.getLong("snooze",0),now))hideAll();
             else {
                 showDog();
@@ -63,7 +63,7 @@ public class CompanionService extends Service {
         PendingIntent settings=PendingIntent.getActivity(this,20,new Intent(this,CompanionActivity.class),PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);
         PendingIntent stop=PendingIntent.getService(this,21,new Intent(this,CompanionService.class).setAction("stop"),PendingIntent.FLAG_IMMUTABLE|PendingIntent.FLAG_UPDATE_CURRENT);
         Notification n=new Notification.Builder(this,"companion").setSmallIcon(android.R.drawable.ic_menu_agenda)
-            .setContentTitle("Your pixel dog is nearby").setContentText("Only visible in chosen apps. Tap for controls.")
+            .setContentTitle("Your pixel dog is nearby").setContentText("Visible by default. Tap to manage app exceptions.")
             .setContentIntent(settings).setOngoing(true).addAction(new Notification.Action.Builder(null,"Stop dog",stop).build()).build();
         startForeground(4701,n);running=true;handler.removeCallbacks(poll);handler.post(poll);return START_NOT_STICKY;
     }

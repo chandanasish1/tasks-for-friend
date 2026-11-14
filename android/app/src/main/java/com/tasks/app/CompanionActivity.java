@@ -36,16 +36,15 @@ public class CompanionActivity extends Activity {
         text("A little company", 28);
         PixelDogView dog = new PixelDogView(this);
         body.addView(dog, new LinearLayout.LayoutParams(dp(104),dp(104)));
-        text("Your pixel pup stays nearby in apps you choose. Double-tap to return to Tasks, drag to move, or hold to open these controls.", 16);
+        text("Your pixel pup stays nearby in all apps by default. Use App exceptions to hide it in individual apps. Double-tap to return to Tasks, drag to move, or hold to open these controls.", 16);
         status = text("", 15);
         button("1. Allow display over other apps", () -> overlaySettings());
         button("2. Allow usage access", () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
         button("3. Allow companion notifications", () -> {
             if(Build.VERSION.SDK_INT >= 33) requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 10);
         });
-        button("Choose apps", this::chooseApps);
+        button("App exceptions", this::chooseApps);
         button("Wake up the dog", () -> {
-            if(!hasChosenApps()) {Toast.makeText(this,"Choose at least one app for your dog first.",Toast.LENGTH_LONG).show();chooseApps();return;}
             if(!Settings.canDrawOverlays(this) || !usageAllowed(this)) {
                 Toast.makeText(this,"Allow overlay and usage access first.",Toast.LENGTH_LONG).show(); return;
             }
@@ -63,7 +62,7 @@ public class CompanionActivity extends Activity {
         button("Start a 25-minute focus window", () -> {prefs.edit().putLong("focusUntil",System.currentTimeMillis()+25*60000).putLong("snooze",0).apply();refresh();});
         button("End focus window", () -> {prefs.edit().putLong("focusUntil",0).apply();refresh();});
         text("Banking & private apps",21);
-        text("Hidden is the default for every other app. Never enable the companion in banking, payments, password managers or authenticators. Android may also hide it on protected screens. App detection has a short delay: this is not a guarantee that a bank will accept an overlay app.",16);
+        text("Companion + focus nudges is the default for all apps. Set banking, payment or other private apps to Hidden in App exceptions. Android may also hide it on protected screens. App detection has a short delay: this is not a guarantee that a bank will accept an overlay app.",16);
         text("If your bank still objects, stop the dog and turn off ‘Allow display over other apps’ below. Some banks check the permission even when no dog is visible. We do not bypass their protection.",16);
         button("Stop & open overlay permission to turn it off", () -> {stopService(new Intent(this,CompanionService.class));overlaySettings();});
         button("Back to Tasks", () -> {startActivity(new Intent(this,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)); finish();});
@@ -86,13 +85,7 @@ public class CompanionActivity extends Activity {
         if(status==null)return;
         status.setText("Overlay: "+(Settings.canDrawOverlays(this)?"allowed":"off")+" · Usage access: "+(usageAllowed(this)?"allowed":"off")
             +"\nFocus window: "+(prefs.getLong("focusUntil",0)>System.currentTimeMillis()?"active":"off")
-            +"\nDog: "+(CompanionService.running?"awake":"resting")
-            +(hasChosenApps()?"":" · choose an app first"));
-    }
-    private boolean hasChosenApps(){
-        for(Map.Entry<String,?> e:prefs.getAll().entrySet())
-            if(e.getKey().startsWith("app:") && e.getValue() instanceof Integer && (Integer)e.getValue()>0)return true;
-        return false;
+            +"\nDog: "+(CompanionService.running?"awake":"resting"));
     }
     private void chooseApps() {
         Intent intent=new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
@@ -101,14 +94,14 @@ public class CompanionActivity extends Activity {
         for(ResolveInfo r:apps) labels.put(r.activityInfo.packageName,r.loadLabel(getPackageManager()).toString());
         List<String> packages=new ArrayList<>(labels.keySet());
         packages.sort(Comparator.comparing(labels::get,String.CASE_INSENSITIVE_ORDER));
-        String[] names=packages.stream().map(p->labels.get(p)+"\n"+p+" · "+modeName(prefs.getInt("app:"+p,0))).toArray(String[]::new);
-        new AlertDialog.Builder(this).setTitle("Choose an app (others stay hidden)").setItems(names,(d,index)->{
+        String[] names=packages.stream().map(p->labels.get(p)+"\n"+p+" · "+modeName(prefs.getInt("app:"+p,CompanionPolicy.DEFAULT_MODE))).toArray(String[]::new);
+        new AlertDialog.Builder(this).setTitle("App exceptions (default: nudges)").setItems(names,(d,index)->{
             String p=packages.get(index);
             new AlertDialog.Builder(this).setTitle(labels.get(p)).setSingleChoiceItems(
-                new String[]{"Hidden — banking & private apps", "Companion only", "Companion + focus nudges"},prefs.getInt("app:"+p,0),(dialog,which)->{
+                new String[]{"Hidden — banking & private apps", "Companion only", "Companion + focus nudges"},prefs.getInt("app:"+p,CompanionPolicy.DEFAULT_MODE),(dialog,which)->{
                     prefs.edit().putInt("app:"+p,which).apply();dialog.dismiss();chooseApps();
                 }).setNegativeButton("Cancel",null).show();
         }).setNegativeButton("Done",null).show();
     }
-    private static String modeName(int mode){return mode==2?"nudges":mode==1?"companion":"hidden";}
+    private static String modeName(int mode){return mode==2?"companion + focus nudges":mode==1?"companion":"hidden";}
 }

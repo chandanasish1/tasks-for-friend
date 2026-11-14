@@ -1,12 +1,12 @@
 # Pixel pup (Android 8+)
 
-Open **Pixel pup** in the Tasks dock. Grant display-over-other-apps, Usage Access and notifications. Choose apps, then wake the dog. Every app is hidden by default; explicitly choose Companion only or Companion + focus nudges. Double-tap the dog to open Tasks, drag to move it, or hold it for controls. The ongoing notification always offers Stop dog.
+Open **Pixel pup** in the Tasks dock. Grant display-over-other-apps, Usage Access and notifications. Wake the dog: all apps default to Companion + focus nudges, including newly installed apps. Use **App exceptions** to set individual apps to Hidden or Companion only. Existing explicit app choices are preserved; previously unconfigured apps adopt the new default. Focus nudges still require an active focus window. Double-tap the dog to open Tasks, drag to move it, or hold it for controls. The ongoing notification always offers Stop dog.
 
 Start a 25-minute focus window in companion controls for gentle task suggestions in apps marked for nudges. The local rule chooses today's earliest unfinished deadline, then list order. Suggestions have a five-minute cooldown, dismiss after 20 seconds, and offer opening Tasks, a five-minute break, or continuing. This is a soft intervention, not an app blocker. No AI account or network inference is used.
 
 ## Banking compatibility
 
-The service removes its windows when usage events report any unselected app. Settings, permission controller and System UI are always excluded. It hides while locked or the screen is off and stops if required permissions disappear. It does not use accessibility services or read screen contents. Android's protected-screen overlay suppression remains in effect.
+The service removes its windows when usage events report an app explicitly set to Hidden. Settings, permission controller and System UI are always excluded. It hides while locked or the screen is off and stops if required permissions disappear. It does not use accessibility services or read screen contents. Android's protected-screen overlay suppression remains in effect.
 
 App transitions are polled every 500 ms while unlocked; OEM event delays can be longer. Therefore automatic hiding cannot guarantee that a bank never observes an overlay during transition. Banks may also reject the overlay grant or sideloaded apps even with no active windows. Before banking, use Stop dog; if the bank still objects use **Stop & open overlay permission to turn it off** and revoke the grant. This requires user action; apps cannot silently revoke their own special access. Do not select sensitive apps for companion visibility.
 
