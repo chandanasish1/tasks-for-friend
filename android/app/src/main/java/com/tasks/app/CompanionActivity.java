@@ -36,6 +36,20 @@ public class CompanionActivity extends Activity {
         text("A little company", 28);
         PixelDogView dog = new PixelDogView(this);
         body.addView(dog, new LinearLayout.LayoutParams(dp(104),dp(104)));
+        text("Choose your companion",20);
+        RadioGroup companions=new RadioGroup(this);
+        String[] companionNames={"Spaniel", "Corgi", "Calico cat"};
+        String[] companionIds={"spaniel", "corgi", "calico"};
+        for(int i=0;i<companionNames.length;i++){
+            RadioButton choice=new RadioButton(this);choice.setId(100+i);choice.setText(companionNames[i]);
+            choice.setTextColor(Color.rgb(65,51,44));choice.setTextSize(16);companions.addView(choice);
+            if(companionIds[i].equals(prefs.getString("species","spaniel")))companions.check(100+i);
+        }
+        companions.setOnCheckedChangeListener((group,id)->{
+            if(id>=100&&id<=102){prefs.edit().putString("species",companionIds[id-100]).apply();dog.touch();dog.invalidate();}
+        });
+        body.addView(companions);
+        text("All three share your tap shortcuts and focus nudges. They settle after 85 seconds without touch and sleep at 90 seconds.",14);
         text("Your pixel pup stays nearby in all apps by default. Use App exceptions to hide it in individual apps. Tap to pet, double-tap for Today, triple-tap for Focus. Drag to move, or hold for these controls.", 16);
         status = text("", 15);
         button("1. Allow display over other apps", () -> overlaySettings());

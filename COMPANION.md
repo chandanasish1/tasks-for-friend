@@ -38,3 +38,9 @@ Verified on the connected phone: single-tap pet animation and speech visible; do
 Original ivory-and-ink floppy-eared dog with a cherry collar, cool shadows and a small gold tag. Separate head, ear, tail and body poses replace the old tan sprite. It blinks and looks around, yawns after 40 seconds without touch, lowers itself from 45 seconds, and sleeps after 50 seconds. Sleeping has gentle breathing and a floating Z. Touch wakes it with a 1.4-second stretch; a single tap adds the happy petting reaction. Touching/dragging resets inactivity. Idle time survives overlay removal/recreation while the app process lives. Sleeping does not disable gestures or nudges.
 
 Device verification: sleeping curled pose visible; a tap wakes it and triggers petting/hearts/speech. Landscape Focus layout and return to tasks visually checked. 47 JavaScript tests and Android tests pass; APK build and lint pass.
+
+## Three companions and 90-second sleep (1.20.0)
+
+In **Pixel pup > Choose your companion**, select Spaniel, Corgi or Calico cat. Selection is saved on this device and applies to an existing overlay without restarting it. The original spaniel remains the default. Corgi and calico are original reference-inspired pixel drawings on a 64x48 nearest-neighbor canvas, with distinct coats, ears, tails and resting poses. They share petting, Today/Focus gestures, nudges and privacy exceptions. Dragging animates a moving gait; calico also has an idle grooming motion.
+
+All three now yawn at 80 seconds without touch, settle from 85 seconds and sleep at 90 seconds. Touch/drag resets this idle period and wakes a resting companion. Timing boundary tests verify 50 seconds is awake, 89.999 seconds is still settling, and 90 seconds is sleep. Selector and both new previews were visually checked on the connected phone; Android tests, APK build and lint passed.

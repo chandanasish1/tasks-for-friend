@@ -123,7 +123,7 @@ public class CompanionService extends Service {
                         if(Math.abs(e.getRawX()-x)+Math.abs(e.getRawY()-y)>ViewConfiguration.get(CompanionService.this).getScaledTouchSlop()){
                             moved=true;taps.cancel();handler.removeCallbacks(hold);
                         }
-                        if(moved&&dog!=null){dogParams.x=px+(int)(e.getRawX()-x);dogParams.y=py+(int)(e.getRawY()-y);clampDog();windows.updateViewLayout(dog,dogParams);}
+                        if(moved&&dog!=null){if(dog instanceof PixelDogView)((PixelDogView)dog).move();dogParams.x=px+(int)(e.getRawX()-x);dogParams.y=py+(int)(e.getRawY()-y);clampDog();windows.updateViewLayout(dog,dogParams);}
                         return true;
                     case MotionEvent.ACTION_UP:
                         handler.removeCallbacks(hold);
