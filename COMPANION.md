@@ -1,8 +1,8 @@
 # Pixel pup (Android 8+)
 
-Open **Pixel pup** in the Tasks dock. Grant display-over-other-apps, Usage Access and notifications. Wake the dog: all apps default to Companion + focus nudges, including newly installed apps. Use **App exceptions** to set individual apps to Hidden or Companion only. Existing explicit app choices are preserved; previously unconfigured apps adopt the new default. Focus nudges still require an active focus window. Double-tap the dog to open Tasks, drag to move it, or hold it for controls. The ongoing notification always offers Stop dog.
+Open **Pixel pup** in the Tasks dock. Grant display-over-other-apps, Usage Access and notifications. Wake the dog: all apps default to Companion + focus nudges, including newly installed apps. Use **App exceptions** to set individual apps to Hidden or Companion only. Existing explicit app choices are preserved; previously unconfigured apps adopt the new default. Focus nudges still require an active focus window. Tap to pet the dog; double-tap to open the Today list; triple-tap to open the Focus session page. Drag to move it, or hold it for controls. Tap sequences settle after 400 ms so a triple tap does not also trigger Today. The ongoing notification always offers Stop dog.
 
-Start a 25-minute focus window in companion controls for gentle task suggestions in apps marked for nudges. The local rule chooses today's earliest unfinished deadline, then list order. Suggestions have a five-minute cooldown, dismiss after 20 seconds, and offer opening Tasks, a five-minute break, or continuing. This is a soft intervention, not an app blocker. No AI account or network inference is used.
+Start the Focus timer or a 25-minute focus window in companion controls for gentle task suggestions in apps marked for nudges. The local rule chooses today's earliest unfinished deadline, then list order. Suggestions have a five-minute cooldown, dismiss after 20 seconds, and offer opening Tasks, a five-minute break, or continuing. This is a soft intervention, not an app blocker. No AI account or network inference is used.
 
 ## Banking compatibility
 
@@ -26,3 +26,9 @@ Run `npm test`, `node --test tests/companion.test.mjs`, and `gradlew testDebugUn
 Foreground detection now replays overlapping usage-event windows, including a longer startup history, so delayed events or starting after the current activity resumed do not leave the dog hidden. Activity matching prevents an older activity stopping from clearing its replacement within the same app. Service diagnostics expose attachment state and errors without task contents.
 
 Verified on the connected Realme Android phone: overlay attached and visually present on the home screen; detached in Android Settings; reattached on returning home. Android unit tests, build and lint passed. Banking acceptance remains unverified.
+
+## 1.18.0 interaction verification
+
+Replaced the double-tap-only detector with separate pet, Today and Focus actions. The launch keeps the overlay visible while requesting the activity, and a native-to-web route selects the requested page even when Tasks was already open. Single taps produce animated hearts, happy eyes, a bounce, a wag and a speech bubble; idle animation adds curious head tilts. A welcome bubble explains the gestures. Speech bubbles do not depend on a running focus window. Actual Focus timer intervals now enable native nudges and pause/break/end updates clear that timer window.
+
+Verified on the connected phone: single-tap pet animation and speech visible; double tap from another app opens Today; triple tap opens Focus; double tap from Focus returns to Today; triple tap from the home screen opens Focus. JavaScript suite (47 tests), Android tests, APK build and lint passed.

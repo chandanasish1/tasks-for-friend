@@ -36,7 +36,7 @@ public class CompanionActivity extends Activity {
         text("A little company", 28);
         PixelDogView dog = new PixelDogView(this);
         body.addView(dog, new LinearLayout.LayoutParams(dp(104),dp(104)));
-        text("Your pixel pup stays nearby in all apps by default. Use App exceptions to hide it in individual apps. Double-tap to return to Tasks, drag to move, or hold to open these controls.", 16);
+        text("Your pixel pup stays nearby in all apps by default. Use App exceptions to hide it in individual apps. Tap to pet, double-tap for Today, triple-tap for Focus. Drag to move, or hold for these controls.", 16);
         status = text("", 15);
         button("1. Allow display over other apps", () -> overlaySettings());
         button("2. Allow usage access", () -> startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
@@ -58,7 +58,7 @@ public class CompanionActivity extends Activity {
         });
         button("Let the dog rest — stop all overlays", () -> {stopService(new Intent(this,CompanionService.class)); refresh();});
         text("Gentle focus", 21);
-        text("Nudges run only during a focus window you start. The dog suggests your next unfinished task, with a break or continue option. No screen contents are read or sent anywhere.",16);
+        text("Nudges run during a Focus timer or a focus window you start here. The dog suggests your next unfinished task, with a break or continue option. No screen contents are read or sent anywhere.",16);
         button("Start a 25-minute focus window", () -> {prefs.edit().putLong("focusUntil",System.currentTimeMillis()+25*60000).putLong("snooze",0).apply();refresh();});
         button("End focus window", () -> {prefs.edit().putLong("focusUntil",0).apply();refresh();});
         text("Banking & private apps",21);

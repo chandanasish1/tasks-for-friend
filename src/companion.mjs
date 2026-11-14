@@ -14,6 +14,19 @@ export function mountCompanion(store) {
     const cap = window.Capacitor;
     if (cap?.getPlatform?.() !== 'android' || !cap.isPluginAvailable?.('Companion')) return;
     const call = (method, args = {}) => cap.nativePromise('Companion', method, args);
+    let routing=false;
+    const route = async () => {
+        if(document.hidden || routing)return;
+        routing=true;
+        try {
+            const {route: destination}=await call('consumeRoute');
+            if(destination==='today') {
+                document.querySelector('[data-page=tasks]')?.click();
+                const today=store.getState().lists.find(l=>l.name.trim().toLowerCase()==='today');
+                if(today)store.setActiveView(today.id);
+            } else if(destination==='focus') document.querySelector('[data-page=focus]')?.click();
+        } finally {routing=false;}
+    };
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'alerts-button'; button.textContent = 'Pixel pup';
     document.querySelector('.app-dock').append(button);
@@ -30,7 +43,8 @@ export function mountCompanion(store) {
         catch { window.alert('Could not open the companion. Restart Tasks and try again.'); }
     };
     store.subscribeState(sync); store.subscribeAuth(sync);
-    document.addEventListener('visibilitychange', () => { if(!document.hidden) sync(); });
+    document.addEventListener('visibilitychange', () => { if(!document.hidden) {sync();route().catch(console.warn);} });
+    setInterval(()=>route().catch(console.warn),500);
     setInterval(() => { if(!document.hidden) sync(); }, 60000);
     sync();
 }

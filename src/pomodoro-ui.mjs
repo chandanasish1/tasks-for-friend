@@ -52,6 +52,7 @@ export function mountPomodoro({ taskStore, supabase }) {
     let month = new Date(); month.setDate(1);
     let selectedDay = dayKey(Date.now());
     let lastHistory = '';
+    let companionUntil=-1;
     const alerts = createPomodoroAlerts(text => { $('#pomoAlertStatus').textContent = text; });
     const model = createPomodoroStore({ storage: localStorage, supabase, onChange: () => { draw(); alerts.refresh(model.get().run); } });
     const dock = document.createElement('nav'); dock.className = 'app-dock'; dock.setAttribute('aria-label', 'Main navigation');
@@ -102,6 +103,12 @@ export function mountPomodoro({ taskStore, supabase }) {
     function draw() {
         const d = model.get(), run = d.run, active = run && run.status !== 'done';
         const ms = active ? remaining(run, Date.now()) : d.config.focus * 60000;
+        const until=run?.status==='running' && run.phases[run.index]?.kind==='focus' ? run.started+run.remaining : 0;
+        const cap=window.Capacitor;
+        if(until!==companionUntil && cap?.isPluginAvailable?.('Companion')) {
+            companionUntil=until;
+            cap.nativePromise('Companion','syncFocus',{until}).catch(()=>{companionUntil=-1;});
+        }
         const seconds = Math.ceil(ms / 1000);
         const clock = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
         dock.querySelector('[data-page=focus]').textContent = active ? `Focus · ${clock}` : 'Focus';
