@@ -20,7 +20,7 @@ Until the migration is applied, the timer, daily goals and heatmap work locally.
 
 On Android, tap Enable interval alerts and allow notifications. Precise alarms may require an additional Android settings permission. Native notifications are scheduled for interval boundaries and are cancelled when pausing or ending a batch. System power restrictions (including Android's idle-mode alarm limits) can delay closely spaced alerts. Force-stopping the app can prevent notifications. Actual locked-device delivery still needs verification on your phone.
 
-On the web, a sound plays while the page can execute. Browsers cannot guarantee alerts when the page is suspended or closed. In both versions, the timer uses stored timestamps, so returning to the app restores the correct remaining time or completed phase. It does not depend on a continuously running one-second counter.
+On the web, Enable interval alerts requests browser notification permission and unlocks sound. The page shows system notifications when an interval ends while it can execute. Keep the page open; suspended or closed browsers cannot guarantee delivery. In both versions, the timer uses stored timestamps, so returning to the app restores the correct remaining time or completed phase. It does not depend on a continuously running one-second counter.
 
 ## Validation
 

@@ -2,6 +2,8 @@ import { createTasksStore } from './store.mjs';
 import { mountPomodoro } from './pomodoro-ui.mjs';
 import { createDayPlanner } from './schedule-ui.mjs';
 import { clock, priorityOrder } from './day-plan.mjs';
+import { routineOccurrence } from './task-reminders.mjs';
+import { mountTaskNotifications } from './task-notifications.mjs';
 import {
     isTaskCompleted,
     isTaskCompletedOn,
@@ -169,6 +171,7 @@ export async function bootstrapTasksApp() {
 
     let appState = store.getState();
     let needsInitialTaskView = true;
+    let taskNotifications = null;
     const dayPlanner = createDayPlanner({ store, render });
     let currentUser = store.getCurrentUser();
     let syncStatus = store.getSyncStatus();
@@ -596,6 +599,7 @@ export async function bootstrapTasksApp() {
                                 _originListId: list.id,
                                 _originListIndex: listIndex,
                                 _listName: list.name,
+                                ...(isRoutineSource ? routineOccurrence(task, todayIso) : {}),
                                 _doneInToday: isRoutineSource
                                     ? isTaskCompletedOn(task, todayIso)
                                     : isTaskCompleted(task)
@@ -605,13 +609,14 @@ export async function bootstrapTasksApp() {
                     }
 
                     if (builtInListKey === 'TOMORROW') {
-                        const isMatch = !isRoutineSource && Boolean(task.date) && task.date === tomorrowIso;
+                        const isMatch = isRoutineSource || (Boolean(task.date) && task.date === tomorrowIso);
                         if (isMatch) {
                             aggregatedTasks.push({
                                 ...task,
                                 _originListId: list.id,
                                 _originListIndex: listIndex,
-                                _listName: list.name
+                                _listName: list.name,
+                                ...(isRoutineSource ? { ...routineOccurrence(task, tomorrowIso), _futureRoutine: true } : {})
                             });
                         }
                         return;
@@ -1045,7 +1050,7 @@ export async function bootstrapTasksApp() {
 
         if (builtInListKey === 'TODAY' || builtInListKey === 'TOMORROW') {
             const controls = document.createElement('div'); controls.className = 'day-plan-controls';
-            controls.innerHTML = '<button type="button" class="day-start"></button><input type="time" class="day-start-time" aria-label="Plan start time"><span></span>';
+            controls.innerHTML = '<button type="button" class="day-start"></button><label class="day-start-label">Start tomorrow at<input type="time" class="day-start-time" aria-label="Plan start time"></label><span></span>';
             controls.querySelector('button').onclick = () => {
                 const day = builtInListKey === 'TODAY' ? getTodayIso() : getTomorrowIso();
                 const start = builtInListKey === 'TODAY' ? dayPlanner.now() : dayPlanner.minutes(controls.querySelector('input').value);
@@ -1088,8 +1093,8 @@ export async function bootstrapTasksApp() {
             const isToday = getBuiltInListKey(display) === 'TODAY';
             const active = dayPlanner.get(isToday ? getTodayIso() : getTomorrowIso());
             controls.querySelector('button').textContent = isToday ? (active ? 'Replan from now' : 'Start my day') : 'Plan tomorrow';
-            const input = controls.querySelector('input'); input.hidden = isToday;
-            if (!input.value) input.value = clock(active?.start ?? dayPlanner.now());
+            const input = controls.querySelector('input'); controls.querySelector('label').hidden = isToday;
+            if (!input.value) input.value = clock(active?.start ?? 480);
             controls.querySelector('span').textContent = active
                 ? 'Fixed events stay anchored. Unfinished work moves into the next free gap. ↑ ↓ set flexible-task priority.'
                 : 'Add durations, then plan around your fixed events. Tasks without durations stay unallocated.';
@@ -1785,7 +1790,7 @@ export async function bootstrapTasksApp() {
             event.stopPropagation();
             const task = element.__task;
             const ctx = element.__ctx;
-            if (!task || element.dataset.completing) {
+            if (!task || task._futureRoutine || element.dataset.completing) {
                 return;
             }
 
@@ -1890,6 +1895,8 @@ export async function bootstrapTasksApp() {
 
         const checkbox = element.querySelector('.task-checkbox');
         const content = element.querySelector('.task-content');
+        checkbox.setAttribute('aria-disabled', String(!!task._futureRoutine));
+        checkbox.title = task._futureRoutine ? 'Tomorrow’s routine preview. Complete today’s occurrence in Today.' : 'Mark complete';
         const textElement = element.querySelector('.task-text');
 
         if (ctx.done) {
@@ -2606,6 +2613,7 @@ export async function bootstrapTasksApp() {
         renderSidebarLists();
         renderRoutineHeatmap();
         renderBoard();
+        taskNotifications?.refresh();
     }
 
     async function handleAuth(event) {
@@ -3199,6 +3207,12 @@ export async function bootstrapTasksApp() {
     render();
     await syncNativeConnectivityState();
     await store.bootstrap();
+    taskNotifications = mountTaskNotifications({ store, plannedTasks: day => {
+        if (!dayPlanner.get(day)) return null;
+        const name = day === getTodayIso() ? 'TODAY' : day === getTomorrowIso() ? 'TOMORROW' : null;
+        const list = name && appState.lists.find(l => getBuiltInListKey(l) === name);
+        return list ? getDisplayList(list).tasks : null;
+    } });
     const initialToday = store.getState().lists.find(l => l.name.toLowerCase() === 'today');
     if (initialToday) store.setActiveView(initialToday.id);
     isAuthBootstrapping = false;

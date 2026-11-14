@@ -3,7 +3,7 @@
 // ============================================
 
 // Versioned by scripts/set-version.mjs — do not edit by hand.
-const CACHE_NAME = 'tasks-app-v1.15.0';
+const CACHE_NAME = 'tasks-app-v1.16.0';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
@@ -22,10 +22,23 @@ const STATIC_ASSETS = [
     '/src/day-plan.mjs',
     '/src/schedule-ui.mjs',
     '/src/workspace.css',
+    '/src/task-reminders.mjs',
+    '/src/task-notifications.mjs',
+    '/src/browser-notifications.mjs',
     '/src/utils.mjs',
     '/src/version.mjs'
 ];
 const APP_SHELL_ASSETS = new Set(STATIC_ASSETS);
+
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    event.waitUntil((async () => {
+        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const existing = windows.find(client => new URL(client.url).origin === self.location.origin);
+        if (existing) return existing.focus();
+        return self.clients.openWindow('/');
+    })());
+});
 
 function getCacheKey(requestUrl) {
     return requestUrl.pathname === '/' ? '/' : requestUrl.pathname;

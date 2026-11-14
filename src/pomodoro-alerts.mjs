@@ -1,4 +1,5 @@
-// Android schedules alarms natively; the web fallback sounds only while the page runs.
+import { enableBrowserNotifications, showBrowserNotification } from './browser-notifications.mjs';
+// Android schedules alarms natively; web alerts require the page to keep running.
 export function createPomodoroAlerts(onStatus) {
     const cap = window.Capacitor;
     const native = cap?.isNativePlatform?.() && cap?.isPluginAvailable?.('LocalNotifications');
@@ -10,7 +11,9 @@ export function createPomodoroAlerts(onStatus) {
         if (Audio) { audio ||= new Audio(); audio.resume().catch(() => {}); }
     }
     function signal() {
-        if (native || !audio || document.hidden) return;
+        if (native) return;
+        showBrowserNotification('Focus interval complete', 'Return to Focus to see your next interval.', `focus-${Math.floor(Date.now()/1000)}`).catch(() => {});
+        if (!audio || document.hidden) return;
         const oscillator = audio.createOscillator(), gain = audio.createGain();
         oscillator.connect(gain); gain.connect(audio.destination);
         oscillator.frequency.value = 660; gain.gain.value = 0.12;
@@ -18,7 +21,12 @@ export function createPomodoroAlerts(onStatus) {
         oscillator.start(); oscillator.stop(audio.currentTime + 0.7);
     }
     async function enable() {
-        if (!native) { unlockAudio(); onStatus('Sound enabled while this page is active. Keep the app open for web alerts.'); return; }
+        if (!native) {
+            unlockAudio();
+            try { await enableBrowserNotifications(); onStatus('Browser notifications enabled. Keep this page open; sleeping browsers can delay alerts.'); }
+            catch(error) { onStatus(error.message); }
+            return;
+        }
         try {
             const permission = await call('requestPermissions');
             if (permission.display !== 'granted') { onStatus('Notifications are disabled in Android settings.'); return; }
@@ -47,7 +55,7 @@ export function createPomodoroAlerts(onStatus) {
                 if (i > snapshot.index) end += snapshot.phases[i].minutes * 60000;
                 if (end > Date.now()) notifications.push({ id: 7400 + i, title: snapshot.phases[i].kind === 'focus' ? 'Focus session complete' : 'Break complete',
                     body: i === snapshot.phases.length - 1 ? 'Your focus batch is finished.' : snapshot.auto ? 'The next interval is starting.' : 'Open Tasks to start the next interval.',
-                    channelId: 'pomodoro', schedule: { at: new Date(end).toISOString(), allowWhileIdle: true } });
+                    channelId: 'pomodoro', isExactNotification: exact.exact_alarm === 'granted', schedule: { at: new Date(end).toISOString(), allowWhileIdle: true } });
                 if (!snapshot.auto) break;
             }
             if (notifications.length) await call('schedule', { notifications });

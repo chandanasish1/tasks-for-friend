@@ -3,6 +3,11 @@
 .app-dock button { font: 500 12px var(--font); letter-spacing: .06em; text-transform: uppercase; color: #888; border: 1px solid transparent; border-radius: 6px; padding: 12px 30px; background: transparent; min-width: 120px; cursor: pointer; }
 .app-dock [aria-current=page] { color: #fff; background: #171717; border-color: #333; }
 .sidebar-overlay:not(.active) { visibility: hidden; }
+.day-start-label { display: flex; flex-direction: column; gap: 5px; color: #aaa; font: 11px var(--font); }
+.day-start-label[hidden] { display: none; }
+.task-checkbox[aria-disabled=true] { opacity: .4; cursor: default; }
+.app-dock button.alerts-button { min-width: 0; padding: 12px; flex: 0 0 auto; }
+.notification-dialog footer { flex-wrap: wrap; }
 #main { padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
 #sidebar { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
 body.focus-page #board, body.focus-page #mobileTabs, body.focus-page #sidebar, body.focus-page #topbar, body.focus-page #sidebarOverlay { display: none !important; }

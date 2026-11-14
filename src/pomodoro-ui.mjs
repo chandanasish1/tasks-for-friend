@@ -20,7 +20,7 @@ export function mountPomodoro({ taskStore, supabase }) {
           <p id="pomoRound" class="pomo-muted"></p><p id="pomoCurrentTask" class="pomo-task-title"></p>
           <div class="pomo-actions"><button type="button" id="pomoStart" class="pomo-primary">Start focus</button><button type="button" id="pomoStop">End batch</button></div>
           <p class="pomo-note">Only focus time counts. Closing this panel keeps the timer running.</p>
-          <button type="button" id="pomoAlerts">Enable interval alerts</button><p id="pomoAlertStatus" class="pomo-note">The timer recovers when you return. Enable alerts for interval reminders on Android.</p>
+          <button type="button" id="pomoAlerts">Enable interval alerts</button><p id="pomoAlertStatus" class="pomo-note">Enable interval notifications on Android or in your browser. Keep the website open for web alerts.</p>
         </section>
         <form id="pomoConfig" class="pomo-settings">
           <h3>Your session</h3>

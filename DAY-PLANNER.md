@@ -10,6 +10,15 @@ Tap **Start my day** to plan from now. **Replan from now** discards current slot
 assignments and calculates again. Tomorrow supports choosing a preview start time.
 Only events in this app are used; there is no Google Calendar integration.
 
+**Start tomorrow at** is a planning start time, not a countdown. Choose the time
+you expect to begin, then press Plan tomorrow. The initial suggestion is 08:00;
+it is not an inferred wake time and can be changed.
+
+Routine tasks repeat in both Today and Tomorrow. Their duration, start/deadline
+time and rigidity apply each day. Completing today's occurrence leaves tomorrow
+pending. Tomorrow's routine checkbox is a preview; complete today's routine in
+Today or Routine. Editing a routine schedule changes its recurring template.
+
 ## Scheduling rules
 
 - Rigid start times remain fixed. Overlaps and overdue rigid events are flagged.

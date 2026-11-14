@@ -38,7 +38,7 @@ export function createDayPlanner({ store, render }) {
     const dialog = document.createElement('dialog');
     dialog.className = 'task-plan-dialog'; dialog.setAttribute('aria-labelledby', 'taskPlanTitle');
     dialog.innerHTML = `<form id="taskPlanForm"><header><h2 id="taskPlanTitle">Task schedule</h2><button type="button" data-close aria-label="Close schedule">×</button></header>
-      <p id="taskPlanName"></p><label>Day<input type="date" name="date"></label>
+      <p id="taskPlanName"></p><p id="taskRecurrence" hidden>Repeats every day. Time and duration apply to each daily occurrence. Completing today does not complete tomorrow.</p><label>Day<input type="date" name="date"></label>
       <label>Duration · minutes (optional)<input type="number" name="duration" min="1" max="1440" step="1" placeholder="No duration"></label>
       <label>Time (optional)<input type="time" name="time"></label>
       <label>Use time as<select name="timeKind"><option value="start">Start time</option><option value="deadline">Finish-by deadline</option></select></label>
@@ -56,6 +56,7 @@ export function createDayPlanner({ store, render }) {
         dialog.querySelector('#taskPlanName').textContent = task.text;
         form.elements.date.value = task.date || '';
         form.elements.date.disabled = list.name.toLowerCase() === 'routine';
+        dialog.querySelector('#taskRecurrence').hidden = !form.elements.date.disabled;
         form.elements.duration.value = task.duration ?? '';
         form.elements.time.value = task.time || '';
         form.elements.timeKind.value = task.timeKind || 'start';

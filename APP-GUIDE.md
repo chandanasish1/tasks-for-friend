@@ -5,7 +5,8 @@
 Open **Focus** from the bottom dock for a Pomodoro timer with custom intervals,
 presets, session batches, configurable short/long breaks, task selection, daily goals,
 and a monthly focused-time heatmap. See [POMODORO.md](POMODORO.md) for setup and
-background notification behaviour. Focus alerts are optional; task due times remain display-only.
+background notification behaviour. Use **Alerts** in the bottom dock to enable task
+and routine reminders or send a test notification. See [NOTIFICATIONS.md](NOTIFICATIONS.md).
 
 The app opens on **Tasks / Today**. Use the dock to switch between Tasks and Focus.
 For durations, rigid/flexible times, daily ordering and **Start my day**, see
@@ -72,8 +73,8 @@ and floats back up. Routine tasks appear in Today every day.
 - At **local midnight**: completed one-off tasks are deleted for good, and
   routines reset to pending. Every morning starts clean.
 - A task with a time shows a small **time chip** or its planned time range.
-  Overdue work is labelled in the monochrome schedule. The app sends no
-  notifications; you check it, it doesn't nag you.
+  Overdue work is labelled in the monochrome schedule. Notifications are optional;
+  enable them from **Alerts** if you want start, duration-end and deadline reminders.
 
 ## Everyday use
 
